@@ -1,0 +1,52 @@
+/**
+ * Type definitions for the Diagnostic IT application
+ */
+
+export type DiagnosticStatus = "si" | "no" | null;
+
+export interface DiagnosticFormData {
+  cliente: string;
+  ubicacion: string;
+  fecha: string;
+}
+
+export interface DiagnosticResult {
+  cliente: string;
+  ubicacion: string;
+  fecha: string;
+  respuestas: DiagnosticStatus[];
+  observaciones: string[];
+  obsGenerales: string;
+  puntos: number;
+  total: number;
+  porcentaje: number;
+  valoracion: string;
+  timestamp: string;
+}
+
+export interface SemaforoResult {
+  label: string;
+  colorClass: string;
+  semaforo: string;
+  minScore: number;
+}
+
+export interface DiagnosticReportPayload {
+  cliente: string;
+  ubicacion: string;
+  fecha: string;
+  respuestas: Array<{
+    n: number;
+    pregunta: string;
+    estado: "Saludable" | "Crítico";
+    observacion: string;
+  }>;
+  observacionesGenerales: string;
+  puntuacion: {
+    puntos: number;
+    total: number;
+    porcentaje: number;
+    valoracion: string;
+  };
+  timestamp: string;
+}
