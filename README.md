@@ -70,6 +70,26 @@ La aplicación queda disponible en:
 http://localhost:3000
 ```
 
+Levantar la aplicación para usarla mediante Cloudflare Tunnel:
+
+```bash
+npm run dev:tunnel
+```
+
+Con la ruta publicada del túnel apuntando a `http://localhost:3000`, la aplicación queda disponible en:
+
+```text
+https://app-procedures.dev-integra.com
+```
+
+Para correr una versión más parecida a producción detrás del túnel:
+
+```bash
+npm run start:tunnel
+```
+
+La ruta `api-procedures.dev-integra.com` debe apuntar a un backend separado escuchando en `http://localhost:8000`. Este repositorio sólo contiene la aplicación web.
+
 Crear build de producción:
 
 ```bash

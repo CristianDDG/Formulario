@@ -1,4 +1,6 @@
 import React, { forwardRef } from "react";
+import type { LucideIcon } from "lucide-react";
+
 import logo from "@/assets/integra-logo.png";
 import bg from "@/assets/datacenter-bg.jpg";
 
@@ -8,7 +10,7 @@ export interface PrintViewProps {
   cliente: string;
   ubicacion: string;
   fecha: string;
-  preguntas: { text: string }[];
+  preguntas: { text: string; icon?: LucideIcon }[];
   respuestas: Estado[];
   observaciones: string[];
   obsGenerales: string;
@@ -18,140 +20,274 @@ export interface PrintViewProps {
   semaforoColor: string;
 }
 
-const NAVY = "#0B2545";
-const NAVY_DARK = "#081B36";
-const ORANGE = "#F28C28";
-const GREEN = "#2BB673";
-const RED = "#E63946";
-const YELLOW = "#F4C430";
+const NAVY = "#082247";
+const NAVY_DARK = "#061A36";
+const NAVY_SOFT = "#0B315F";
+const ORANGE = "#F97316";
+const GREEN = "#22C55E";
+const RED = "#EF4444";
+const YELLOW = "#FACC15";
+const BORDER = "#D7E1EE";
+const TEXT = "#0F2442";
+
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
+  const start = polarPoint(cx, cy, r, endAngle);
+  const end = polarPoint(cx, cy, r, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
+
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
+}
+
+function roundNumber(value: number, decimals = 4) {
+  return Number(value.toFixed(decimals));
+}
+
+function polarPoint(cx: number, cy: number, r: number, angle: number) {
+  const radians = ((angle - 180) * Math.PI) / 180;
+  return {
+    x: roundNumber(cx + r * Math.cos(radians)),
+    y: roundNumber(cy + r * Math.sin(radians)),
+  };
+}
 
 function Gauge({ porcentaje }: { porcentaje: number }) {
-  // Professional semicircular gauge with clean styling
-  const r = 60;
-  const cx = 100;
-  const cy = 100;
-  const angle = (porcentaje / 100) * 180;
-  const rad = (Math.PI * (180 - angle)) / 180;
-  const nx = cx + r * Math.cos(rad);
-  const ny = cy - r * Math.sin(rad);
-
-  // Create arc path
-  const arc = (start: number, end: number, color: string) => {
-    const s = (Math.PI * (180 - start)) / 180;
-    const e = (Math.PI * (180 - end)) / 180;
-    const x1 = cx + r * Math.cos(s);
-    const y1 = cy - r * Math.sin(s);
-    const x2 = cx + r * Math.cos(e);
-    const y2 = cy - r * Math.sin(e);
-    const large = end - start > 90 ? 1 : 0;
-    return (
-      <path
-        d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`}
-        stroke={color}
-        strokeWidth={16}
-        fill="none"
-        strokeLinecap="round"
-      />
-    );
-  };
-
-  // Create tick marks at 0%, 20%, 40%, 60%, 80%, 100%
-  const tickMarks = [];
-  for (let i = 0; i <= 5; i++) {
-    const tickAngle = (i / 5) * 180;
-    const tickRad = (Math.PI * (180 - tickAngle)) / 180;
-    const x1 = cx + (r + 6) * Math.cos(tickRad);
-    const y1 = cy - (r + 6) * Math.sin(tickRad);
-    const x2 = cx + (r + 14) * Math.cos(tickRad);
-    const y2 = cy - (r + 14) * Math.sin(tickRad);
-
-    tickMarks.push(
-      <line
-        key={`tick-${i}`}
-        x1={x1}
-        y1={y1}
-        x2={x2}
-        y2={y2}
-        stroke="#1e293b"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />,
-    );
-
-    // Add labels
-    const labelRad = (Math.PI * (180 - tickAngle)) / 180;
-    const lx = cx + (r + 26) * Math.cos(labelRad);
-    const ly = cy - (r + 26) * Math.sin(labelRad);
-    tickMarks.push(
-      <text
-        key={`label-${i}`}
-        x={lx}
-        y={ly}
-        fontSize="11"
-        fontWeight="700"
-        fill="#1e293b"
-        textAnchor="middle"
-        dominantBaseline="middle"
-      >
-        {i * 20}%
-      </text>,
-    );
-  }
+  const cx = 124;
+  const cy = 118;
+  const r = 86;
+  const value = Math.max(0, Math.min(100, porcentaje));
+  const needle = polarPoint(cx, cy, r - 12, (value / 100) * 180);
+  const ticks = [0, 25, 50, 75, 100];
 
   return (
-    <svg width="220" height="160" viewBox="0 0 220 160">
+    <svg
+      viewBox="0 0 248 152"
+      className="h-[110px] w-full max-w-[250px]"
+      role="img"
+      aria-label={`Puntuación total ${porcentaje}%`}
+    >
       <defs>
-        <filter id="needleShadow">
-          <feDropShadow dx="1" dy="1" stdDeviation="1.5" floodOpacity="0.3" />
+        <filter id="printGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
+        <linearGradient id="printCenterBoxGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+          <stop offset="100%" stopColor="#f8f9fa" stopOpacity="1" />
+        </linearGradient>
       </defs>
 
-      {/* Background circle */}
-      <circle
-        cx={cx}
-        cy={cy}
-        r={r + 1}
+      <path
+        d={describeArc(cx, cy, r, 0, 124.2)}
+        stroke={RED}
+        strokeWidth="22"
+        strokeLinecap="round"
         fill="none"
-        stroke="#cbd5e1"
-        strokeWidth="1"
-        opacity="0.4"
+      />
+      <path
+        d={describeArc(cx, cy, r, 124.2, 151.2)}
+        stroke={YELLOW}
+        strokeWidth="22"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d={describeArc(cx, cy, r, 151.2, 180)}
+        stroke={GREEN}
+        strokeWidth="22"
+        strokeLinecap="round"
+        fill="none"
       />
 
-      {/* Colored arcs */}
-      {arc(0, 60, RED)}
-      {arc(60, 120, YELLOW)}
-      {arc(120, 180, GREEN)}
+      {ticks.map((tick) => {
+        const angle = (tick / 100) * 180;
+        const outer = polarPoint(cx, cy, r + 15, angle);
+        const labelDistance = tick === 50 ? r + 30 : r + 38;
+        const label = polarPoint(cx, cy, labelDistance, angle);
 
-      {/* Tick marks and labels */}
-      {tickMarks}
+        return (
+          <g key={tick}>
+            <circle cx={outer.x} cy={outer.y} r="3.2" fill="#ffffff" opacity="0.95" />
+            <text
+              x={label.x}
+              y={label.y + 3}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="12"
+              fontWeight="700"
+              fill="#FFFFFF"
+              style={{ paintOrder: "stroke", stroke: NAVY_DARK, strokeWidth: 0.5 }}
+            >
+              {tick}%
+            </text>
+          </g>
+        );
+      })}
 
-      {/* Needle */}
-      <g filter="url(#needleShadow)">
-        <line
-          x1={cx}
-          y1={cy}
-          x2={nx}
-          y2={ny}
-          stroke="#0B2545"
-          strokeWidth="3"
-          strokeLinecap="round"
-        />
-        <circle cx={cx} cy={cy} r={6} fill="#0B2545" stroke="#fff" strokeWidth="2" />
-      </g>
+      <line
+        x1={cx}
+        y1={cy}
+        x2={needle.x}
+        y2={needle.y}
+        stroke="#FFFFFF"
+        strokeWidth="5"
+        strokeLinecap="round"
+        filter="url(#printGlow)"
+      />
 
-      {/* Percentage text - larger and centered */}
-      <text
-        x={cx}
-        y={cy + 42}
-        fontSize="42"
-        fontWeight="800"
-        fill="#0B2545"
-        textAnchor="middle"
-        dominantBaseline="middle"
-      >
+      <circle cx={cx} cy={cy} r="11" fill={NAVY_DARK} stroke="#FFFFFF" strokeWidth="4" />
+      <rect
+        x="73"
+        y="94"
+        width="94"
+        height="54"
+        rx="14"
+        fill="url(#printCenterBoxGradient)"
+        style={{ filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))" }}
+      />
+      <text x={cx} y="132" textAnchor="middle" fontSize="42" fontWeight="900" fill={NAVY}>
         {porcentaje}%
       </text>
     </svg>
+  );
+}
+
+function FieldBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        background: "#203A63",
+        border: "1.5px solid rgba(255,255,255,0.18)",
+        borderRadius: "8px",
+        padding: "12px 14px",
+        color: "#FFFFFF",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <span
+          style={{
+            width: "16px",
+            height: "16px",
+            borderRadius: "50%",
+            border: `2.5px solid ${ORANGE}`,
+            display: "inline-block",
+            flex: "0 0 auto",
+          }}
+        />
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{ fontSize: "9px", fontWeight: 700, color: "#C7D3E4", letterSpacing: "0.3px" }}
+          >
+            {label}
+          </div>
+          <div
+            style={{
+              marginTop: "3px",
+              minHeight: "16px",
+              borderBottom: "2px solid rgba(255,255,255,0.75)",
+              fontSize: "12px",
+              fontWeight: 700,
+              color: "#FFFFFF",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {value || ""}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatusMark({ status }: { status: Estado }) {
+  const items = [
+    { key: "si", label: "✓", color: GREEN, active: status === "si" },
+    { key: "no", label: "×", color: RED, active: status === "no" },
+  ];
+
+  return (
+    <div style={{ display: "flex", justifyContent: "center", gap: "8px" }}>
+      {items.map((item) => (
+        <span
+          key={item.key}
+          style={{
+            width: "20px",
+            height: "20px",
+            borderRadius: "50%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: `1.5px solid ${item.active ? item.color : "#B8C7DA"}`,
+            background: item.active ? item.color : "#FFFFFF",
+            color: item.active ? "#FFFFFF" : "#9AA9BC",
+            fontSize: "13px",
+            fontWeight: 800,
+            lineHeight: 1,
+          }}
+        >
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ValuationRows({ valoracion }: { valoracion: string }) {
+  const rows = [
+    { color: GREEN, range: "85 - 100%", label: "SALUDABLE" },
+    { color: YELLOW, range: "70 - 84%", label: "MEDIO" },
+    { color: RED, range: "< 70%", label: "CRÍTICO" },
+  ];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {rows.map((row) => {
+        const active = row.label === valoracion;
+
+        return (
+          <div
+            key={row.label}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              background: active ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)",
+              border: `1.5px solid ${active ? "#FFFFFF" : `${row.color}55`}`,
+              borderRadius: "8px",
+              padding: "8px 10px",
+              color: "#FFFFFF",
+            }}
+          >
+            <span
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+                background: row.color,
+                border: "1px solid rgba(255,255,255,0.72)",
+                boxShadow: `0 0 12px ${row.color}80`,
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "13px", fontWeight: 800 }}>{row.range}</div>
+              <div
+                style={{ marginTop: "1px", fontSize: "10px", fontWeight: 700, color: "#D7E1EE" }}
+              >
+                {row.label}
+              </div>
+            </div>
+            {active && <span style={{ fontSize: "14px", fontWeight: 800 }}>✓</span>}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -161,111 +297,146 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
       ref={ref}
       style={
         {
-          width: "794px", // A4 @ 96dpi
-          background: "#fff",
+          width: "794px",
+          minHeight: "1123px",
+          overflow: "hidden",
+          background: "#FFFFFF",
           fontFamily: "Arial, Helvetica, sans-serif",
-          color: "#1f2937",
+          color: TEXT,
           padding: "0",
+          boxSizing: "border-box",
           WebkitPrintColorAdjust: "exact",
           printColorAdjust: "exact",
           colorAdjust: "exact",
         } as React.CSSProperties
       }
     >
-      {/* HEADER */}
+      {/* Header */}
       <div
         style={{
-          position: "relative",
-          height: "120px",
-          backgroundColor: NAVY,
-          backgroundImage: `linear-gradient(90deg, rgba(11,37,69,0.95) 0%, rgba(11,37,69,0.75) 55%, rgba(11,37,69,0.55) 100%), url(${bg})`,
+          minHeight: "150px",
+          display: "grid",
+          gridTemplateColumns: "240px 1fr",
+          backgroundColor: "#FFFFFF",
+          backgroundImage: `linear-gradient(90deg, rgba(255,255,255,1) 0%, rgba(255,255,255,0.96) 38%, rgba(255,255,255,0.74) 58%, rgba(255,255,255,0.2) 100%), url(${bg})`,
           backgroundSize: "cover",
-          backgroundPosition: "center",
-          display: "flex",
-          alignItems: "center",
-          padding: "0 24px",
-          color: "#fff",
+          backgroundPosition: "center right",
+          borderBottom: `1px solid ${BORDER}`,
         }}
       >
-        <img
-          src={logo}
-          alt="Integra"
-          style={{ height: "80px", width: "auto", objectFit: "contain", background: "transparent" }}
-        />
-        <div style={{ marginLeft: "20px" }}>
-          <div
-            style={{ fontSize: "26px", fontWeight: 800, letterSpacing: "0.5px", lineHeight: 1.1 }}
-          >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRight: `1px solid ${BORDER}`,
+            background: "rgba(255,255,255,0.96)",
+          }}
+        >
+          <img
+            src={logo}
+            alt="Integra Industrial Networks"
+            style={{ width: "140px", height: "auto" }}
+          />
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            paddingLeft: "32px",
+            paddingRight: "32px",
+          }}
+        >
+          <div style={{ fontSize: "32px", fontWeight: 900, lineHeight: 1.05, color: NAVY }}>
             DIAGNÓSTICO DE SALUD
           </div>
           <div
             style={{
-              fontSize: "20px",
-              fontWeight: 700,
+              marginTop: "4px",
+              fontSize: "32px",
+              fontWeight: 900,
+              lineHeight: 1.05,
               color: ORANGE,
-              lineHeight: 1.1,
-              marginTop: "2px",
             }}
           >
             DE INFRAESTRUCTURA IT
           </div>
-          <div
-            style={{
-              height: "3px",
-              width: "120px",
-              background: ORANGE,
-              marginTop: "6px",
-              borderRadius: "2px",
-            }}
-          />
+          <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span
+              style={{ width: "6px", height: "6px", borderRadius: "50%", background: ORANGE }}
+            />
+            <span
+              style={{ width: "200px", height: "3px", borderRadius: "999px", background: ORANGE }}
+            />
+            <span
+              style={{ width: "6px", height: "6px", borderRadius: "50%", background: ORANGE }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* CLIENT BAR */}
-      <div
-        style={{
-          background: NAVY_DARK,
-          color: "#fff",
-          padding: "10px 16px",
-          display: "flex",
-          gap: "10px",
-        }}
-      >
-        {[
-          { label: "CLIENTE", value: p.cliente },
-          { label: "UBICACIÓN", value: p.ubicacion },
-          { label: "FECHA", value: p.fecha },
-        ].map((f) => (
-          <div
-            key={f.label}
-            style={{
-              flex: 1,
-              border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: "20px",
-              padding: "6px 14px",
-            }}
-          >
-            <div style={{ fontSize: "9px", letterSpacing: "2px", color: "#cbd5e1" }}>{f.label}</div>
-            <div style={{ fontSize: "13px", fontWeight: 600, color: "#fff" }}>{f.value || "—"}</div>
-          </div>
-        ))}
+      {/* Cliente, Ubicación, Fecha */}
+      <div style={{ background: NAVY_DARK, padding: "12px 20px", display: "flex", gap: "12px" }}>
+        <FieldBlock label="CLIENTE" value={p.cliente} />
+        <FieldBlock label="UBICACIÓN" value={p.ubicacion} />
+        <FieldBlock label="FECHA" value={p.fecha} />
       </div>
 
-      {/* TABLE */}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+      {/* Tabla de preguntas */}
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+          fontSize: "11px",
+        }}
+      >
         <thead>
-          <tr style={{ background: "#f1f5f9", color: "#334155" }}>
-            <th style={{ padding: "6px", border: "1px solid #e2e8f0", width: "28px" }}>No.</th>
-            <th style={{ padding: "6px", border: "1px solid #e2e8f0", textAlign: "left" }}>
-              PUNTO DE REVISIÓN
-            </th>
-            <th style={{ padding: "6px", border: "1px solid #e2e8f0", width: "70px" }}>ESTADO</th>
+          <tr style={{ background: NAVY, color: "#FFFFFF" }}>
             <th
               style={{
-                padding: "6px",
-                border: "1px solid #e2e8f0",
-                width: "240px",
+                width: "48px",
+                padding: "10px 6px",
+                borderRight: "1px solid rgba(255,255,255,0.2)",
+                fontWeight: 800,
+                fontSize: "10px",
+                textAlign: "center",
+              }}
+            >
+              No.
+            </th>
+            <th
+              style={{
+                flex: 1,
+                padding: "10px 10px",
+                borderRight: "1px solid rgba(255,255,255,0.2)",
                 textAlign: "left",
+                fontWeight: 800,
+                fontSize: "10px",
+              }}
+            >
+              PUNTO DE REVISIÓN
+            </th>
+            <th
+              style={{
+                width: "90px",
+                padding: "10px 6px",
+                borderRight: "1px solid rgba(255,255,255,0.2)",
+                fontWeight: 800,
+                fontSize: "10px",
+                textAlign: "center",
+              }}
+            >
+              ESTADO
+            </th>
+            <th
+              style={{
+                flex: 1,
+                padding: "10px 10px",
+                textAlign: "left",
+                fontWeight: 800,
+                fontSize: "10px",
               }}
             >
               OBSERVACIONES
@@ -273,41 +444,59 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
           </tr>
         </thead>
         <tbody>
-          {p.preguntas.map((q, i) => {
-            const r = p.respuestas[i];
+          {p.preguntas.map((question, index) => {
             return (
-              <tr key={i}>
+              <tr key={question.text}>
                 <td
                   style={{
-                    padding: "5px",
-                    border: "1px solid #e2e8f0",
-                    background: NAVY,
-                    color: "#fff",
+                    padding: "8px 6px",
+                    borderBottom: `1px solid ${BORDER}`,
                     textAlign: "center",
+                    fontSize: "11px",
                     fontWeight: 700,
+                    background: NAVY_SOFT,
+                    color: "#FFFFFF",
                   }}
                 >
-                  {i + 1}
+                  {index + 1}
                 </td>
-                <td style={{ padding: "5px 8px", border: "1px solid #e2e8f0" }}>{q.text}</td>
-                <td style={{ padding: "5px", border: "1px solid #e2e8f0", textAlign: "center" }}>
-                  {r === "si" && (
-                    <span
-                      style={{ color: "#16a34a", fontWeight: 900, fontSize: "18px", lineHeight: 1 }}
-                    >
-                      ✔
-                    </span>
-                  )}
-                  {r === "no" && (
-                    <span
-                      style={{ color: "#dc2626", fontWeight: 900, fontSize: "18px", lineHeight: 1 }}
-                    >
-                      ✘
-                    </span>
-                  )}
+                <td
+                  style={{
+                    padding: "8px 10px",
+                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
+                    borderBottom: `1px solid ${BORDER}`,
+                    fontSize: "10px",
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: TEXT, lineHeight: 1.2 }}>
+                    {question.text}
+                  </span>
                 </td>
-                <td style={{ padding: "5px 8px", border: "1px solid #e2e8f0", color: "#475569" }}>
-                  {p.observaciones[i] || ""}
+                <td
+                  style={{
+                    padding: "8px 6px",
+                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
+                    borderBottom: `1px solid ${BORDER}`,
+                    textAlign: "center",
+                  }}
+                >
+                  <StatusMark status={p.respuestas[index]} />
+                </td>
+                <td
+                  style={{
+                    padding: "8px 10px",
+                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
+                    borderBottom: `1px solid ${BORDER}`,
+                    color: "#53657D",
+                    lineHeight: 1.3,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    maxHeight: "40px",
+                    overflow: "hidden",
+                    fontSize: "10px",
+                  }}
+                >
+                  {p.observaciones[index] || ""}
                 </td>
               </tr>
             );
@@ -315,184 +504,161 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
         </tbody>
       </table>
 
-      {/* BOTTOM SECTION */}
-      <div style={{ display: "flex", gap: "14px", padding: "20px", background: "#f0f4f8" }}>
-        {/* Gauge - Left */}
+      {/* Sección de resultados */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: "12px",
+          padding: "16px",
+          background: "#EEF3F8",
+        }}
+      >
+        {/* Puntuación Total */}
         <div
           style={{
-            flex: 1.1,
-            background: "linear-gradient(135deg, #0B2545 0%, #081B36 100%)",
-            borderRadius: "14px",
-            padding: "20px",
-            color: "#fff",
+            background: NAVY,
+            borderRadius: "8px",
+            padding: "14px",
+            color: "#FFFFFF",
             textAlign: "center",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
           }}
         >
           <div
             style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "1.8px",
-              marginBottom: "12px",
-              color: "#cbd5e1",
-              textTransform: "uppercase",
+              marginBottom: "10px",
+              fontSize: "12px",
+              fontWeight: 800,
+              letterSpacing: "0.5px",
             }}
           >
             PUNTUACIÓN TOTAL
           </div>
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: "14px",
-              padding: "16px",
-              display: "inline-block",
-              boxShadow: "inset 0 2px 6px rgba(0,0,0,0.08)",
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
             <Gauge porcentaje={p.porcentaje} />
+          </div>
+          <div style={{ marginTop: "5px", fontSize: "11px", fontWeight: 700, color: "#C7D3E4" }}>
+            {p.puntos} puntos saludables de {p.preguntas.length}
           </div>
         </div>
 
-        {/* Semaforo - Middle */}
+        {/* Semáforo de Valoración */}
         <div
           style={{
-            flex: 1,
-            background: "linear-gradient(135deg, #0B2545 0%, #081B36 100%)",
-            borderRadius: "14px",
-            padding: "20px",
-            color: "#fff",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: NAVY,
+            borderRadius: "8px",
+            padding: "14px",
+            color: "#FFFFFF",
             display: "flex",
             flexDirection: "column",
+            justifyContent: "space-between",
           }}
         >
           <div
             style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "1.8px",
-              marginBottom: "14px",
+              marginBottom: "10px",
               textAlign: "center",
-              color: "#cbd5e1",
-              textTransform: "uppercase",
+              fontSize: "12px",
+              fontWeight: 800,
+              letterSpacing: "0.5px",
             }}
           >
             SEMÁFORO DE VALORACIÓN
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "10px",
-              flex: 1,
-              justifyContent: "center",
-            }}
-          >
-            {[
-              { c: GREEN, r: "85 - 100%", l: "SALUDABLE" },
-              { c: YELLOW, r: "70 - 84%", l: "MEDIO" },
-              { c: RED, r: "< 70%", l: "CRÍTICO" },
-            ].map((s) => (
-              <div
-                key={s.l}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  background: "rgba(255,255,255,0.06)",
-                  border: `1.5px solid ${s.c}50`,
-                  color: "#fff",
-                  borderRadius: "10px",
-                  padding: "11px 14px",
-                  fontSize: "11px",
-                }}
-              >
-                <span
-                  style={{
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    background: s.c,
-                    display: "inline-block",
-                    boxShadow: `0 0 10px ${s.c}70`,
-                    flexShrink: 0,
-                  }}
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: "11px", lineHeight: "1.2" }}>{s.l}</div>
-                  <div style={{ fontSize: "10px", color: "#cbd5e1", marginTop: "2px" }}>{s.r}</div>
-                </div>
-              </div>
-            ))}
+          <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+            <ValuationRows valoracion={p.valoracion} />
           </div>
         </div>
 
-        {/* Obs - Right */}
+        {/* Observaciones Generales */}
         <div
           style={{
-            flex: 1.1,
-            background: "linear-gradient(135deg, #0B2545 0%, #081B36 100%)",
-            borderRadius: "14px",
-            padding: "20px",
-            color: "#fff",
-            boxShadow: "0 6px 16px rgba(0,0,0,0.12)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: NAVY,
+            borderRadius: "8px",
+            padding: "14px",
+            color: "#FFFFFF",
             display: "flex",
             flexDirection: "column",
+            justifyContent: "space-between",
           }}
         >
           <div
             style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              letterSpacing: "1.8px",
-              marginBottom: "12px",
-              color: "#cbd5e1",
-              textTransform: "uppercase",
+              marginBottom: "10px",
+              textAlign: "center",
+              fontSize: "12px",
+              fontWeight: 800,
+              letterSpacing: "0.5px",
             }}
           >
             OBSERVACIONES GENERALES
           </div>
           <div
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1.5px solid rgba(255,255,255,0.12)",
-              color: "#e2e8f0",
-              borderRadius: "10px",
-              padding: "14px",
-              fontSize: "11px",
               flex: 1,
+              background: "#FFFFFF",
+              borderRadius: "6px",
+              padding: "10px",
+              color: "#334155",
+              fontSize: "10px",
+              lineHeight: 1.4,
               overflow: "hidden",
               whiteSpace: "pre-wrap",
-              lineHeight: "1.5",
-              textAlign: "justify",
+              wordBreak: "break-word",
             }}
           >
-            {p.obsGenerales || ""}
+            {p.obsGenerales || "(Sin observaciones)"}
           </div>
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* Footer */}
       <div
         style={{
+          height: "40px",
           background: NAVY,
-          color: "#fff",
-          padding: "10px 16px",
+          color: "#FFFFFF",
           display: "flex",
-          justifyContent: "space-around",
-          fontSize: "12px",
-          fontWeight: 600,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "35px",
+          fontSize: "11px",
+          fontWeight: 700,
+          borderTop: `1px solid ${BORDER}`,
         }}
       >
-        <span>📞 442 749 0997</span>
-        <span>🌐 www.integraindustrialnetworks.com</span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+          <span
+            style={{
+              width: "14px",
+              height: "14px",
+              borderRadius: "50%",
+              background: ORANGE,
+              display: "inline-block",
+            }}
+          />
+          442 749 0997
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+          <span
+            style={{
+              width: "14px",
+              height: "14px",
+              borderRadius: "50%",
+              background: ORANGE,
+              display: "inline-block",
+            }}
+          />
+          www.integraindustrialnetworks.com
+        </span>
       </div>
     </div>
   );
 });
+
 DiagnosticoPrintView.displayName = "DiagnosticoPrintView";
+
 export default DiagnosticoPrintView;

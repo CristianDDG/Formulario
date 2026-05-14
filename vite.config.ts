@@ -5,6 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
+const tunnelAllowedHosts = ["app-procedures.dev-integra.com", ".dev-integra.com"];
+
 /**
  * Vite configuration for Formulario Integra.
  */
@@ -18,7 +20,15 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
-    host: "localhost",
+    strictPort: true,
+    host: "0.0.0.0",
+    allowedHosts: tunnelAllowedHosts,
+  },
+  preview: {
+    port: 3000,
+    strictPort: true,
+    host: "0.0.0.0",
+    allowedHosts: tunnelAllowedHosts,
   },
   build: {
     outDir: "dist",
