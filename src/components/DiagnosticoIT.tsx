@@ -1,18 +1,24 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type InputHTMLAttributes } from "react";
 import {
   AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Building2,
   Calendar,
   Check,
   ClipboardCheck,
+  Clock3,
   Download,
   Eye,
   Globe2,
+  Mail,
   MapPin,
   Phone,
   RotateCcw,
   Send,
   User,
   X,
+  type LucideIcon,
 } from "lucide-react";
 
 import { DIAGNOSTIC_QUESTIONS, TOTAL_QUESTIONS } from "@/constants/diagnostics";
@@ -23,11 +29,11 @@ import {
   getHealthStatus,
   submitDiagnosticReport,
   validateFormData,
+  finalizeAndSendDiagnosis,
 } from "@/services/diagnostic";
 import { generatePDFFromHTML } from "@/services/pdf";
 import type { DiagnosticStatus } from "@/types/diagnostic";
 import DiagnosticoPrintView from "./DiagnosticoPrintView";
-import { TopField } from "./form/TopField";
 
 import logo from "@/assets/integra-logo.png";
 import datacenterBg from "@/assets/datacenter-bg.jpg";
@@ -36,6 +42,8 @@ const NAVY_DARK = "#061a36";
 const GREEN = "#22c55e";
 const YELLOW = "#facc15";
 const RED = "#ef4444";
+
+type FlowStage = "intro" | "questions" | "summary";
 
 function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
   const start = polarPoint(cx, cy, r, endAngle);
@@ -160,40 +168,6 @@ function ScoreGauge({ porcentaje }: { porcentaje: number }) {
   );
 }
 
-function StatusButton({
-  active,
-  label,
-  tone,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  tone: "ok" | "critical";
-  onClick: () => void;
-}) {
-  const Icon = tone === "ok" ? Check : X;
-  const activeClass =
-    tone === "ok"
-      ? "border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-900/20"
-      : "border-red-600 bg-red-600 text-white shadow-md shadow-red-900/20";
-  const idleClass =
-    tone === "ok"
-      ? "border-slate-300 bg-white text-slate-400 hover:border-emerald-500 hover:text-emerald-600"
-      : "border-slate-300 bg-white text-slate-400 hover:border-red-500 hover:text-red-600";
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      aria-pressed={active}
-      className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition ${active ? activeClass : idleClass}`}
-    >
-      <Icon className="h-4 w-4" strokeWidth={3} />
-    </button>
-  );
-}
-
 function SemaforoLegend({ activeLabel, isComplete }: { activeLabel: string; isComplete: boolean }) {
   const levels = [
     { label: "SALUDABLE", range: "85 - 100%", color: GREEN },
@@ -231,28 +205,194 @@ function SemaforoLegend({ activeLabel, isComplete }: { activeLabel: string; isCo
   );
 }
 
+function IntakeField({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+  type = "text",
+  placeholder,
+  required = false,
+  inputMode,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+  inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 flex items-center gap-2 text-xs font-black uppercase text-slate-300">
+        <Icon className="h-4 w-4 text-orange-400" />
+        {label}
+        {required && <span className="text-orange-300">*</span>}
+      </span>
+      <input
+        type={type}
+        inputMode={inputMode}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="h-12 w-full rounded-lg border border-white/15 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/25"
+      />
+    </label>
+  );
+}
+
+function IntroFact({
+  icon: Icon,
+  value,
+  label,
+}: {
+  icon: LucideIcon;
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 border-t border-slate-200 pt-4">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-orange-600">
+        <Icon className="h-5 w-5" />
+      </span>
+      <div>
+        <div className="text-base font-black text-[#082247]">{value}</div>
+        <div className="text-sm font-semibold text-slate-500">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+function AnswerOption({
+  active,
+  tone,
+  title,
+  description,
+  onClick,
+}: {
+  active: boolean;
+  tone: "ok" | "critical";
+  title: string;
+  description: string;
+  onClick: () => void;
+}) {
+  const Icon = tone === "ok" ? Check : X;
+  const activeClass =
+    tone === "ok"
+      ? "border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-900/15"
+      : "border-red-600 bg-red-600 text-white shadow-md shadow-red-900/15";
+  const idleClass =
+    tone === "ok"
+      ? "border-slate-200 bg-white text-slate-700 hover:border-emerald-500"
+      : "border-slate-200 bg-white text-slate-700 hover:border-red-500";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex min-h-[92px] items-center gap-4 rounded-lg border-2 p-4 text-left transition ${active ? activeClass : idleClass}`}
+    >
+      <span
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+          active ? "bg-white/20" : "bg-slate-100"
+        }`}
+      >
+        <Icon className="h-5 w-5" strokeWidth={3} />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-base font-black">{title}</span>
+        <span
+          className={`mt-1 block text-sm font-semibold ${active ? "text-white/80" : "text-slate-500"}`}
+        >
+          {description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
 export default function DiagnosticoIT() {
   const [state, actions] = useDiagnosticForm();
   const [descargando, setDescargando] = useState(false);
   const [mostrarPreview, setMostrarPreview] = useState(false);
+  const [stage, setStage] = useState<FlowStage>("intro");
+  const [currentQuestion, setCurrentQuestion] = useState(0);
   const printRef = useRef<HTMLDivElement>(null);
 
   const { puntos, porcentaje } = calculateDiagnosticScore(state.respuestas);
   const healthStatus = getHealthStatus(porcentaje);
   const respondidas = state.respuestas.filter((respuesta) => respuesta !== null).length;
+  const saludables = state.respuestas.filter((respuesta) => respuesta === "si").length;
+  const criticos = state.respuestas.filter((respuesta) => respuesta === "no").length;
   const faltantes = TOTAL_QUESTIONS - respondidas;
-  const progress = Math.round((respondidas / TOTAL_QUESTIONS) * 100);
-  const hasRequiredFields =
+  const currentStatus = state.respuestas[currentQuestion];
+  const currentQuestionData = DIAGNOSTIC_QUESTIONS[currentQuestion];
+  const CurrentQuestionIcon = currentQuestionData.icon;
+  const contactComplete =
+    state.nombreCompleto.trim() !== "" &&
+    (state.telefono.trim() !== "" || state.correo.trim() !== "");
+  const siteDetailsComplete =
     state.cliente.trim() !== "" && state.ubicacion.trim() !== "" && state.fecha.trim() !== "";
+  const hasRequiredFields = contactComplete && siteDetailsComplete;
   const isComplete = hasRequiredFields && respondidas === TOTAL_QUESTIONS;
+  const progress =
+    stage === "intro"
+      ? 0
+      : stage === "summary"
+        ? 100
+        : Math.round((respondidas / TOTAL_QUESTIONS) * 100);
+  const progressTitle =
+    stage === "intro"
+      ? "Inicio: datos de contacto y del sitio"
+      : stage === "summary"
+        ? "Diagnóstico completo"
+        : `Pregunta ${currentQuestion + 1} de ${TOTAL_QUESTIONS}`;
+  const progressStatus =
+    stage === "intro"
+      ? "Tiempo estimado: 3 min"
+      : stage === "summary"
+        ? healthStatus.label
+        : `Faltan ${faltantes} respuestas`;
+  const mediosContacto = [state.telefono, state.correo].filter(Boolean).join(" · ");
 
   const markDirty = () => {
     if (state.enviado) actions.setEnviado(false);
     if (state.error) actions.setError("");
   };
 
+  const validateInitialData = () => {
+    if (!state.nombreCompleto.trim()) {
+      actions.setError("Completa el nombre completo del contacto.");
+      return false;
+    }
+
+    if (!state.telefono.trim() && !state.correo.trim()) {
+      actions.setError("Agrega al menos un medio de contacto: teléfono o correo electrónico.");
+      return false;
+    }
+
+    if (!state.cliente.trim() || !state.ubicacion.trim() || !state.fecha.trim()) {
+      actions.setError("Completa los campos de Cliente, Ubicación y Fecha.");
+      return false;
+    }
+
+    actions.setError("");
+    return true;
+  };
+
   const ensureComplete = () => {
-    const validation = validateFormData(state.cliente, state.ubicacion, state.fecha, respondidas);
+    const validation = validateFormData(
+      state.nombreCompleto,
+      state.telefono,
+      state.correo,
+      state.cliente,
+      state.ubicacion,
+      state.fecha,
+      respondidas,
+    );
 
     if (!validation.valid) {
       actions.setError(validation.error || "Completa el diagnóstico antes de continuar.");
@@ -263,9 +403,45 @@ export default function DiagnosticoIT() {
     return true;
   };
 
+  const handleStart = () => {
+    if (!validateInitialData()) return;
+
+    const firstUnanswered = state.respuestas.findIndex((respuesta) => respuesta === null);
+    setCurrentQuestion(firstUnanswered === -1 ? TOTAL_QUESTIONS - 1 : firstUnanswered);
+    setStage(firstUnanswered === -1 ? "summary" : "questions");
+  };
+
   const handleAnswer = (index: number, value: DiagnosticStatus) => {
     actions.setRespuesta(index, value);
     markDirty();
+  };
+
+  const handleNextQuestion = () => {
+    if (currentStatus === null) {
+      actions.setError("Selecciona Saludable o Crítico para continuar.");
+      return;
+    }
+
+    actions.setError("");
+
+    if (currentQuestion >= TOTAL_QUESTIONS - 1) {
+      // Final question - finalize and send diagnosis
+      handleFinalizeDiagnosis();
+      return;
+    }
+
+    setCurrentQuestion((prev) => prev + 1);
+  };
+
+  const handlePreviousQuestion = () => {
+    actions.setError("");
+
+    if (currentQuestion === 0) {
+      setStage("intro");
+      return;
+    }
+
+    setCurrentQuestion((prev) => prev - 1);
   };
 
   const handleDownloadPDF = async () => {
@@ -283,39 +459,52 @@ export default function DiagnosticoIT() {
     setDescargando(false);
   };
 
-  const handleSubmit = async () => {
+  const handleFinalizeDiagnosis = async () => {
     if (!ensureComplete()) return;
 
-    actions.setEnviando(true);
+    actions.setSendStatus({ sending: true, error: undefined });
 
-    const payload = buildReportPayload(
+    const result = await finalizeAndSendDiagnosis(
+      state.nombreCompleto,
+      state.telefono,
+      state.correo,
       state.cliente,
       state.ubicacion,
       state.fecha,
-      DIAGNOSTIC_QUESTIONS,
       state.respuestas,
       state.observaciones,
       state.obsGenerales,
-      puntos,
-      porcentaje,
-      healthStatus.label,
     );
 
-    const result = await submitDiagnosticReport(payload);
-
-    if (!result.ok) {
-      actions.setError(result.error || "Error enviando el reporte.");
-      actions.setEnviando(false);
-      return;
+    if (result.success && result.sendStatus) {
+      actions.setSendStatus({
+        sent: true,
+        sending: false,
+        sentAt: result.sendStatus.sentAt,
+        clientEmail: result.sendStatus.clientEmail,
+        internalEmail: result.sendStatus.internalEmail,
+      });
+      actions.setEnviado(true);
+    } else {
+      actions.setSendStatus({
+        sent: false,
+        sending: false,
+        error: result.error,
+      });
+      actions.setError(result.error || "Error enviando el diagnóstico.");
     }
 
-    actions.setEnviado(true);
-    actions.setEnviando(false);
+    setStage("summary");
   };
 
   const handleReset = () => {
     const hasContent =
-      hasRequiredFields ||
+      state.nombreCompleto.trim() !== "" ||
+      state.telefono.trim() !== "" ||
+      state.correo.trim() !== "" ||
+      state.cliente.trim() !== "" ||
+      state.ubicacion.trim() !== "" ||
+      state.fecha.trim() !== "" ||
       respondidas > 0 ||
       state.obsGenerales.trim() !== "" ||
       state.observaciones.some((observacion) => observacion.trim() !== "");
@@ -328,6 +517,8 @@ export default function DiagnosticoIT() {
     }
 
     setMostrarPreview(false);
+    setStage("intro");
+    setCurrentQuestion(0);
     actions.reset();
   };
 
@@ -366,46 +557,11 @@ export default function DiagnosticoIT() {
           </div>
         </header>
 
-        <section className="grid grid-cols-1 gap-3 bg-[#061a36] px-4 py-4 text-white md:grid-cols-3">
-          <TopField
-            icon={User}
-            label="CLIENTE"
-            value={state.cliente}
-            onChange={(value) => {
-              actions.setCliente(value);
-              markDirty();
-            }}
-          />
-          <TopField
-            icon={MapPin}
-            label="UBICACIÓN"
-            value={state.ubicacion}
-            onChange={(value) => {
-              actions.setUbicacion(value);
-              markDirty();
-            }}
-          />
-          <TopField
-            icon={Calendar}
-            label="FECHA"
-            type="date"
-            value={state.fecha}
-            onChange={(value) => {
-              actions.setFecha(value);
-              markDirty();
-            }}
-          />
-        </section>
-
         <section className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-4 text-sm font-bold text-[#082247]">
-                <span>
-                  {isComplete
-                    ? "Diagnóstico completo: resultado y acciones disponibles"
-                    : `Avance del diagnóstico: ${respondidas} de ${TOTAL_QUESTIONS}`}
-                </span>
+                <span>{progressTitle}</span>
                 <span>{progress}%</span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
@@ -418,129 +574,19 @@ export default function DiagnosticoIT() {
             <div className="flex shrink-0 items-center gap-2 text-sm font-semibold">
               <span
                 className="h-3 w-3 rounded-full"
-                style={{ backgroundColor: isComplete ? healthStatus.semaforo : "#94a3b8" }}
+                style={{
+                  backgroundColor:
+                    stage === "summary" && isComplete ? healthStatus.semaforo : "#f97316",
+                }}
               />
-              <span className={isComplete ? healthStatus.colorClass : "text-slate-500"}>
-                {isComplete ? healthStatus.label : `Faltan ${faltantes} puntos`}
+              <span
+                className={
+                  stage === "summary" && isComplete ? healthStatus.colorClass : "text-slate-500"
+                }
+              >
+                {progressStatus}
               </span>
             </div>
-          </div>
-        </section>
-
-        <section className="overflow-x-auto">
-          <table className="w-full min-w-[1000px] border-collapse text-sm">
-            <thead>
-              <tr className="bg-[#082247] text-white">
-                <th className="w-16 border-r border-white/20 px-3 py-4 text-center font-black">
-                  No.
-                </th>
-                <th className="border-r border-white/20 px-4 py-4 text-left font-black">
-                  PUNTO DE REVISIÓN
-                </th>
-                <th className="w-36 border-r border-white/20 px-4 py-4 text-center font-black">
-                  ESTADO
-                </th>
-                <th className="w-[32%] px-4 py-4 text-left font-black">OBSERVACIONES</th>
-              </tr>
-            </thead>
-            <tbody>
-              {DIAGNOSTIC_QUESTIONS.map((question, index) => {
-                const Icon = question.icon;
-                const currentStatus = state.respuestas[index];
-
-                return (
-                  <tr
-                    key={question.text}
-                    className={`border-b border-slate-200 transition ${
-                      currentStatus === null ? "bg-white" : "bg-slate-50/55"
-                    } hover:bg-orange-50/40`}
-                  >
-                    <td className="bg-[#0b315f] px-3 py-3 text-center text-base font-black text-white">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Icon className="h-5 w-5 shrink-0 text-[#082247]" strokeWidth={2.4} />
-                        <span className="font-semibold text-slate-800">{question.text}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-4">
-                        <StatusButton
-                          active={currentStatus === "si"}
-                          label={`Marcar saludable el punto ${index + 1}`}
-                          tone="ok"
-                          onClick={() => handleAnswer(index, "si")}
-                        />
-                        <StatusButton
-                          active={currentStatus === "no"}
-                          label={`Marcar crítico el punto ${index + 1}`}
-                          tone="critical"
-                          onClick={() => handleAnswer(index, "no")}
-                        />
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        value={state.observaciones[index]}
-                        onChange={(event) => {
-                          actions.setObservacion(index, event.target.value);
-                          markDirty();
-                        }}
-                        className="w-full border-b border-slate-300 bg-transparent px-1 py-2 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-500"
-                        placeholder="Agregar observación"
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </section>
-
-        <section id="diagnostic-summary" className="grid gap-3 bg-[#eef3f8] p-4 md:grid-cols-3">
-          <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
-            <div className="mb-4 text-center text-sm font-black uppercase">Puntuación total</div>
-            <div className="flex flex-1 items-center justify-center">
-              <ScoreGauge porcentaje={porcentaje} />
-            </div>
-            <div className="mt-4 text-center text-sm font-semibold text-white/70">
-              {puntos} puntos saludables de {TOTAL_QUESTIONS}
-            </div>
-          </div>
-
-          <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
-            <div className="mb-4 text-center text-sm font-black uppercase">
-              Semáforo de valoración
-            </div>
-            <div className="flex flex-1 flex-col justify-center">
-              <SemaforoLegend activeLabel={healthStatus.label} isComplete={isComplete} />
-            </div>
-            {!isComplete && (
-              <div className="mt-4 flex items-start gap-2 rounded-md bg-white/10 p-3 text-xs text-white/75">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
-                <span>El semáforo será definitivo cuando completes los datos y los 21 puntos.</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
-            <label
-              htmlFor="observaciones-generales"
-              className="mb-4 block text-center text-sm font-black uppercase"
-            >
-              Observaciones generales
-            </label>
-            <textarea
-              id="observaciones-generales"
-              value={state.obsGenerales}
-              onChange={(event) => {
-                actions.setObsGenerales(event.target.value);
-                markDirty();
-              }}
-              placeholder="Notas adicionales sobre el diagnóstico"
-              className="flex-1 w-full resize-none rounded-md border border-white/20 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500"
-            />
           </div>
         </section>
 
@@ -551,67 +597,462 @@ export default function DiagnosticoIT() {
           </div>
         )}
 
-        <section className="flex flex-col gap-4 border-t border-slate-200 bg-white px-4 py-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-start gap-3 text-sm">
-            <ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#082247]" />
-            <div>
-              <div className="font-black text-[#082247]">
-                {state.enviado
-                  ? "Reporte enviado al administrador"
-                  : isComplete
-                    ? "Reporte listo para generar"
-                    : "Completa el diagnóstico para habilitar las acciones"}
+        <main className="bg-[#eef3f8] p-4 sm:p-6">
+          {stage === "intro" && (
+            <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_430px]">
+              <div className="flex flex-col justify-center rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
+                <div className="text-sm font-black uppercase text-orange-500">Antes de empezar</div>
+                <h3 className="mt-3 text-2xl font-black leading-tight text-[#082247] sm:text-3xl">
+                  Evalúa 21 puntos críticos de tu infraestructura IT.
+                </h3>
+                <p className="mt-4 max-w-3xl text-base font-semibold leading-7 text-slate-600">
+                  Responderás un diagnóstico breve sobre seguridad, energía, cableado, racks,
+                  ambiente físico y documentación. Al terminar tendrás una valoración clara con
+                  semáforo, puntuación total y un reporte listo para enviar o descargar.
+                </p>
+                <div className="mt-7 grid gap-4 sm:grid-cols-3">
+                  <IntroFact icon={Clock3} value="3 min" label="Tiempo estimado" />
+                  <IntroFact icon={ClipboardCheck} value="21 puntos" label="Revisión guiada" />
+                  <IntroFact icon={Check} value="Reporte" label="Resultado accionable" />
+                </div>
               </div>
-              <div className="text-slate-500">
-                {isComplete
-                  ? `${state.cliente || "Cliente"} · ${state.ubicacion || "Ubicación"} · ${
-                      state.fecha || "Fecha"
-                    }`
-                  : "Llena cliente, ubicación, fecha y responde todos los puntos de revisión."}
-              </div>
-            </div>
-          </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={state.enviando || !isComplete}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#082247] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0b315f] disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <Send className="h-4 w-4" />
-              {state.enviando ? "Enviando..." : "Enviar diagnóstico"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                if (ensureComplete()) setMostrarPreview(true);
-              }}
-              disabled={!isComplete}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border-2 border-[#082247] bg-white px-5 py-3 text-sm font-black text-[#082247] transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <Eye className="h-4 w-4" />
-              Vista previa PDF
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadPDF}
-              disabled={descargando || !isComplete}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              <Download className="h-4 w-4" />
-              {descargando ? "Generando..." : "Descargar PDF"}
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-200"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Nuevo
-            </button>
-          </div>
-        </section>
+              <form
+                className="rounded-lg bg-[#082247] p-5 text-white shadow-sm"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleStart();
+                }}
+              >
+                <div className="mb-5">
+                  <h3 className="text-lg font-black">Datos iniciales</h3>
+                  <p className="mt-1 text-sm font-semibold text-slate-300">
+                    Captura el contacto y el sitio antes de iniciar el flujo.
+                  </p>
+                </div>
+
+                <div className="grid gap-4">
+                  <IntakeField
+                    icon={User}
+                    label="Nombre completo"
+                    required
+                    value={state.nombreCompleto}
+                    placeholder="Nombre de quien responde"
+                    onChange={(value) => {
+                      actions.setNombreCompleto(value);
+                      markDirty();
+                    }}
+                  />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <IntakeField
+                      icon={Phone}
+                      label="Teléfono"
+                      value={state.telefono}
+                      type="tel"
+                      inputMode="tel"
+                      placeholder="Teléfono"
+                      onChange={(value) => {
+                        actions.setTelefono(value);
+                        markDirty();
+                      }}
+                    />
+                    <IntakeField
+                      icon={Mail}
+                      label="Correo electrónico"
+                      value={state.correo}
+                      type="email"
+                      inputMode="email"
+                      placeholder="correo@empresa.com"
+                      onChange={(value) => {
+                        actions.setCorreo(value);
+                        markDirty();
+                      }}
+                    />
+                  </div>
+                  <p className="-mt-2 text-xs font-semibold text-slate-400">
+                    Agrega teléfono o correo. Puedes capturar ambos si están disponibles.
+                  </p>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <IntakeField
+                      icon={Building2}
+                      label="Cliente"
+                      required
+                      value={state.cliente}
+                      placeholder="Empresa o cliente"
+                      onChange={(value) => {
+                        actions.setCliente(value);
+                        markDirty();
+                      }}
+                    />
+                    <IntakeField
+                      icon={MapPin}
+                      label="Ubicación"
+                      required
+                      value={state.ubicacion}
+                      placeholder="Planta, ciudad o sitio"
+                      onChange={(value) => {
+                        actions.setUbicacion(value);
+                        markDirty();
+                      }}
+                    />
+                  </div>
+                  <IntakeField
+                    icon={Calendar}
+                    label="Fecha"
+                    required
+                    type="date"
+                    value={state.fecha}
+                    onChange={(value) => {
+                      actions.setFecha(value);
+                      markDirty();
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-600"
+                >
+                  Iniciar diagnóstico
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </form>
+            </section>
+          )}
+
+          {stage === "questions" && (
+            <section className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:p-6">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <div className="text-sm font-black uppercase text-orange-500">
+                      Pregunta {currentQuestion + 1} de {TOTAL_QUESTIONS}
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-slate-500">
+                      Responde el punto actual y avanza al siguiente.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStage("intro")}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-600 transition hover:bg-slate-50"
+                  >
+                    <User className="h-4 w-4" />
+                    Editar datos
+                  </button>
+                </div>
+
+                <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-[#082247] text-white">
+                    <CurrentQuestionIcon className="h-7 w-7" strokeWidth={2.4} />
+                  </span>
+                  <h3 className="text-2xl font-black leading-snug text-[#082247]">
+                    {currentQuestionData.text}
+                  </h3>
+                </div>
+
+                <div className="mt-7 grid gap-3 sm:grid-cols-2">
+                  <AnswerOption
+                    active={currentStatus === "si"}
+                    title="Saludable"
+                    description="Cumple o se encuentra operativo."
+                    tone="ok"
+                    onClick={() => handleAnswer(currentQuestion, "si")}
+                  />
+                  <AnswerOption
+                    active={currentStatus === "no"}
+                    title="Crítico"
+                    description="No cumple, presenta riesgo o requiere atención."
+                    tone="critical"
+                    onClick={() => handleAnswer(currentQuestion, "no")}
+                  />
+                </div>
+
+                <label htmlFor="observacion-actual" className="mt-6 block">
+                  <span className="mb-2 block text-sm font-black uppercase text-[#082247]">
+                    Observación
+                  </span>
+                  <textarea
+                    id="observacion-actual"
+                    value={state.observaciones[currentQuestion]}
+                    onChange={(event) => {
+                      actions.setObservacion(currentQuestion, event.target.value);
+                      markDirty();
+                    }}
+                    placeholder="Agrega una nota para este punto si aplica"
+                    className="min-h-[120px] w-full resize-none rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15"
+                  />
+                </label>
+
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={handlePreviousQuestion}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-200"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    {currentQuestion === 0 ? "Volver al inicio" : "Anterior"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextQuestion}
+                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#082247] px-5 py-3 text-sm font-black text-white transition hover:bg-[#0b315f]"
+                  >
+                    {currentQuestion === TOTAL_QUESTIONS - 1
+                      ? "Finalizar diagnóstico y enviar reporte"
+                      : "Siguiente"}
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <aside className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                <div className="text-sm font-black uppercase text-[#082247]">Avance</div>
+                <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg bg-slate-100 px-2 py-3">
+                    <div className="text-xl font-black text-[#082247]">{respondidas}</div>
+                    <div className="text-[11px] font-bold uppercase text-slate-500">Listas</div>
+                  </div>
+                  <div className="rounded-lg bg-emerald-50 px-2 py-3">
+                    <div className="text-xl font-black text-emerald-600">{saludables}</div>
+                    <div className="text-[11px] font-bold uppercase text-slate-500">Salud</div>
+                  </div>
+                  <div className="rounded-lg bg-red-50 px-2 py-3">
+                    <div className="text-xl font-black text-red-600">{criticos}</div>
+                    <div className="text-[11px] font-bold uppercase text-slate-500">Crítico</div>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <div className="mb-2 text-xs font-black uppercase text-slate-500">
+                    Mapa de respuestas
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                    {state.respuestas.map((respuesta, index) => (
+                      <button
+                        type="button"
+                        key={DIAGNOSTIC_QUESTIONS[index].text}
+                        onClick={() => {
+                          actions.setError("");
+                          setCurrentQuestion(index);
+                        }}
+                        aria-label={`Ir a la pregunta ${index + 1}`}
+                        className={`flex h-8 items-center justify-center rounded-md text-xs font-black ${
+                          index === currentQuestion
+                            ? "bg-orange-500 text-white"
+                            : respuesta === "si"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : respuesta === "no"
+                                ? "bg-red-100 text-red-700"
+                                : "bg-slate-100 text-slate-400"
+                        }`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-5 border-t border-slate-200 pt-4 text-sm">
+                  <div className="font-black text-[#082247]">{state.nombreCompleto}</div>
+                  <div className="mt-1 font-semibold text-slate-500">{mediosContacto}</div>
+                  <div className="mt-3 font-semibold text-slate-600">
+                    {state.cliente} · {state.ubicacion}
+                  </div>
+                  <div className="mt-1 font-semibold text-slate-500">{state.fecha}</div>
+                </div>
+              </aside>
+            </section>
+          )}
+
+          {stage === "summary" && (
+            <section>
+              <div className="mb-4 flex flex-col gap-3 rounded-lg bg-white p-5 shadow-sm ring-1 ring-slate-200 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3">
+                  <ClipboardCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#082247]" />
+                  <div>
+                    <div className="font-black text-[#082247]">
+                      {isComplete
+                        ? "Diagnóstico listo para generar"
+                        : "Completa el diagnóstico para habilitar las acciones"}
+                    </div>
+                    <div className="text-sm font-semibold text-slate-500">
+                      {state.nombreCompleto} · {state.cliente} · {state.ubicacion} · {state.fecha}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStage("questions");
+                    setCurrentQuestion(0);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-black text-slate-700 transition hover:bg-slate-200"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Revisar respuestas
+                </button>
+              </div>
+
+              <section id="diagnostic-summary" className="grid gap-3 md:grid-cols-3">
+                <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
+                  <div className="mb-4 text-center text-sm font-black uppercase">
+                    Puntuación total
+                  </div>
+                  <div className="flex flex-1 items-center justify-center">
+                    <ScoreGauge porcentaje={porcentaje} />
+                  </div>
+                  <div className="mt-4 text-center text-sm font-semibold text-white/70">
+                    {puntos} de {TOTAL_QUESTIONS} puntos en estado saludable
+                  </div>
+                </div>
+
+                <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
+                  <div className="mb-4 text-center text-sm font-black uppercase">
+                    Estado de salud IT
+                  </div>
+                  <div className="flex flex-1 flex-col justify-center">
+                    <SemaforoLegend activeLabel={healthStatus.label} isComplete={isComplete} />
+                  </div>
+                  {!isComplete && (
+                    <div className="mt-4 flex items-start gap-2 rounded-md bg-white/10 p-3 text-xs text-white/75">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-orange-300" />
+                      <span>
+                        El semáforo será definitivo cuando completes los datos y los 21 puntos.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
+                  <label
+                    htmlFor="observaciones-generales"
+                    className="mb-4 block text-center text-sm font-black uppercase"
+                  >
+                    Observaciones generales
+                  </label>
+                  <textarea
+                    id="observaciones-generales"
+                    value={state.obsGenerales}
+                    onChange={(event) => {
+                      actions.setObsGenerales(event.target.value);
+                      markDirty();
+                    }}
+                    placeholder="Agrega recomendaciones, hallazgos críticos o próximos pasos para el cliente."
+                    className="flex-1 w-full resize-none rounded-md border border-white/20 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500"
+                  />
+                </div>
+              </section>
+
+              <section className="mt-4 flex flex-col gap-4 rounded-lg border border-slate-200 bg-white px-4 py-5">
+                {/* Estado de envío */}
+                <div className="flex items-center justify-center">
+                  {state.sendStatus.sending ? (
+                    <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-6 py-4 text-blue-700">
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+                      <span className="font-semibold">Enviando diagnóstico...</span>
+                    </div>
+                  ) : state.sendStatus.sent ? (
+                    <div className="flex items-center gap-3 rounded-lg bg-green-50 px-6 py-4 text-green-700">
+                      <Check className="h-5 w-5" />
+                      <div>
+                        <div className="font-semibold">Diagnóstico enviado correctamente</div>
+                        <div className="text-sm text-green-600">
+                          Cliente: {state.sendStatus.clientEmail} · Copia interna:{" "}
+                          {state.sendStatus.internalEmail}
+                          {state.sendStatus.sentAt &&
+                            ` · ${new Date(state.sendStatus.sentAt).toLocaleString()}`}
+                        </div>
+                      </div>
+                    </div>
+                  ) : state.sendStatus.error ? (
+                    <div className="flex items-center gap-3 rounded-lg bg-red-50 px-6 py-4 text-red-700">
+                      <AlertCircle className="h-5 w-5" />
+                      <div>
+                        <div className="font-semibold">No se pudo enviar el diagnóstico</div>
+                        <div className="text-sm text-red-600">{state.sendStatus.error}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-6 py-4 text-slate-700">
+                      <Mail className="h-5 w-5" />
+                      <div>
+                        <div className="font-semibold">Reporte listo para enviar</div>
+                        <div className="text-sm text-slate-600">
+                          Cliente: {state.correo} · Copia interna:
+                          diagnosticos@integraindustrialnetworks.com
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botones principales y secundarios */}
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    {/* Botón principal */}
+                    {!state.sendStatus.sent && !state.sendStatus.sending && (
+                      <button
+                        type="button"
+                        onClick={handleFinalizeDiagnosis}
+                        disabled={!isComplete || state.sendStatus.sending}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#082247] px-6 py-3 text-sm font-black text-white transition hover:bg-[#0b315f] disabled:cursor-not-allowed disabled:opacity-45"
+                      >
+                        <Send className="h-4 w-4" />
+                        {state.sendStatus.sending ? "Enviando..." : "Enviar diagnóstico"}
+                      </button>
+                    )}
+
+                    {/* Botón de reintento en caso de error */}
+                    {state.sendStatus.error && !state.sendStatus.sending && (
+                      <button
+                        type="button"
+                        onClick={handleFinalizeDiagnosis}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-6 py-3 text-sm font-black text-white transition hover:bg-orange-600"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Reintentar envío
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Acciones secundarias */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (ensureComplete()) setMostrarPreview(true);
+                      }}
+                      disabled={!isComplete}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Ver PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDownloadPDF}
+                      disabled={descargando || !isComplete}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
+                    >
+                      <Download className="h-4 w-4" />
+                      {descargando ? "Generando..." : "Descargar PDF"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleReset}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                      Nuevo diagnóstico
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </section>
+          )}
+        </main>
 
         <footer className="flex flex-col gap-3 bg-[#061a36] px-5 py-4 text-sm font-black text-white sm:flex-row sm:items-center sm:justify-center sm:gap-12">
           <span className="inline-flex items-center justify-center gap-2">
@@ -659,6 +1100,9 @@ export default function DiagnosticoIT() {
               <div className="flex min-w-[820px] justify-center">
                 <div className="origin-top scale-[0.74] shadow-2xl lg:scale-[0.86]">
                   <DiagnosticoPrintView
+                    nombreCompleto={state.nombreCompleto}
+                    telefono={state.telefono}
+                    correo={state.correo}
                     cliente={state.cliente}
                     ubicacion={state.ubicacion}
                     fecha={state.fecha}
@@ -689,6 +1133,9 @@ export default function DiagnosticoIT() {
       >
         <DiagnosticoPrintView
           ref={printRef}
+          nombreCompleto={state.nombreCompleto}
+          telefono={state.telefono}
+          correo={state.correo}
           cliente={state.cliente}
           ubicacion={state.ubicacion}
           fecha={state.fecha}

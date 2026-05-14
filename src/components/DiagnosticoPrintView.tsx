@@ -7,6 +7,9 @@ import bg from "@/assets/datacenter-bg.jpg";
 type Estado = "si" | "no" | null;
 
 export interface PrintViewProps {
+  nombreCompleto: string;
+  telefono: string;
+  correo: string;
   cliente: string;
   ubicacion: string;
   fecha: string;
@@ -292,6 +295,8 @@ function ValuationRows({ valoracion }: { valoracion: string }) {
 }
 
 const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref) => {
+  const medioContacto = [p.telefono, p.correo].filter(Boolean).join(" / ");
+
   return (
     <div
       ref={ref}
@@ -376,11 +381,22 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
         </div>
       </div>
 
-      {/* Cliente, Ubicación, Fecha */}
-      <div style={{ background: NAVY_DARK, padding: "12px 20px", display: "flex", gap: "12px" }}>
+      {/* Datos iniciales */}
+      <div
+        style={{
+          background: NAVY_DARK,
+          padding: "12px 20px",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          gap: "10px",
+        }}
+      >
+        <FieldBlock label="CONTACTO" value={p.nombreCompleto} />
+        <FieldBlock label="MEDIO DE CONTACTO" value={medioContacto} />
+        <FieldBlock label="FECHA" value={p.fecha} />
         <FieldBlock label="CLIENTE" value={p.cliente} />
         <FieldBlock label="UBICACIÓN" value={p.ubicacion} />
-        <FieldBlock label="FECHA" value={p.fecha} />
+        <FieldBlock label="TOTAL DE PUNTOS" value={String(p.preguntas.length)} />
       </div>
 
       {/* Tabla de preguntas */}
@@ -541,7 +557,7 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
             <Gauge porcentaje={p.porcentaje} />
           </div>
           <div style={{ marginTop: "5px", fontSize: "11px", fontWeight: 700, color: "#C7D3E4" }}>
-            {p.puntos} puntos saludables de {p.preguntas.length}
+            {p.puntos} de {p.preguntas.length} puntos en estado saludable
           </div>
         </div>
 
@@ -566,7 +582,7 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
               letterSpacing: "0.5px",
             }}
           >
-            SEMÁFORO DE VALORACIÓN
+            ESTADO DE SALUD IT
           </div>
           <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
             <ValuationRows valoracion={p.valoracion} />

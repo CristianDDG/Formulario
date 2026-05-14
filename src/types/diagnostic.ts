@@ -5,12 +5,18 @@
 export type DiagnosticStatus = "si" | "no" | null;
 
 export interface DiagnosticFormData {
+  nombreCompleto: string;
+  telefono: string;
+  correo: string;
   cliente: string;
   ubicacion: string;
   fecha: string;
 }
 
 export interface DiagnosticResult {
+  nombreCompleto: string;
+  telefono: string;
+  correo: string;
   cliente: string;
   ubicacion: string;
   fecha: string;
@@ -32,6 +38,11 @@ export interface SemaforoResult {
 }
 
 export interface DiagnosticReportPayload {
+  contacto: {
+    nombreCompleto: string;
+    telefono: string;
+    correo: string;
+  };
   cliente: string;
   ubicacion: string;
   fecha: string;
@@ -49,4 +60,23 @@ export interface DiagnosticReportPayload {
     valoracion: string;
   };
   timestamp: string;
+}
+
+export interface EmailConfig {
+  internalReportEmail: string;
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  mailFrom: string;
+  resendApiKey?: string;
+}
+
+export interface SendStatus {
+  sent: boolean;
+  sending: boolean;
+  error?: string;
+  sentAt?: string;
+  clientEmail?: string;
+  internalEmail?: string;
 }

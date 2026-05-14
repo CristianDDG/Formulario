@@ -91,3 +91,8 @@ export const STATUS_CONFIG = {
     minScore: 0,
   },
 };
+
+export const EMAIL_CONFIG = {
+  internalReportEmail: "diagnosticos@integraindustrialnetworks.com",
+  mailFrom: "diagnosticos@integraindustrialnetworks.com",
+};

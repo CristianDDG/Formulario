@@ -2,6 +2,9 @@ import { useState, useCallback } from "react";
 import type { DiagnosticStatus } from "@/types/diagnostic";
 
 export interface UseDiagnosticFormState {
+  nombreCompleto: string;
+  telefono: string;
+  correo: string;
   cliente: string;
   ubicacion: string;
   fecha: string;
@@ -11,9 +14,20 @@ export interface UseDiagnosticFormState {
   enviado: boolean;
   enviando: boolean;
   error: string;
+  sendStatus: {
+    sent: boolean;
+    sending: boolean;
+    error?: string;
+    sentAt?: string;
+    clientEmail?: string;
+    internalEmail?: string;
+  };
 }
 
 export interface UseDiagnosticFormActions {
+  setNombreCompleto: (value: string) => void;
+  setTelefono: (value: string) => void;
+  setCorreo: (value: string) => void;
   setCliente: (value: string) => void;
   setUbicacion: (value: string) => void;
   setFecha: (value: string) => void;
@@ -23,10 +37,14 @@ export interface UseDiagnosticFormActions {
   setEnviado: (value: boolean) => void;
   setEnviando: (value: boolean) => void;
   setError: (value: string) => void;
+  setSendStatus: (status: Partial<UseDiagnosticFormState["sendStatus"]>) => void;
   reset: () => void;
 }
 
 const initialState: UseDiagnosticFormState = {
+  nombreCompleto: "",
+  telefono: "",
+  correo: "",
   cliente: "",
   ubicacion: "",
   fecha: "",
@@ -36,6 +54,10 @@ const initialState: UseDiagnosticFormState = {
   enviado: false,
   enviando: false,
   error: "",
+  sendStatus: {
+    sent: false,
+    sending: false,
+  },
 };
 
 /**
@@ -43,6 +65,21 @@ const initialState: UseDiagnosticFormState = {
  */
 export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormActions] {
   const [state, setState] = useState<UseDiagnosticFormState>(initialState);
+
+  const setNombreCompleto = useCallback(
+    (value: string) => setState((prev) => ({ ...prev, nombreCompleto: value })),
+    [],
+  );
+
+  const setTelefono = useCallback(
+    (value: string) => setState((prev) => ({ ...prev, telefono: value })),
+    [],
+  );
+
+  const setCorreo = useCallback(
+    (value: string) => setState((prev) => ({ ...prev, correo: value })),
+    [],
+  );
 
   const setCliente = useCallback(
     (value: string) => setState((prev) => ({ ...prev, cliente: value })),
@@ -95,6 +132,13 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
     [],
   );
 
+  const setSendStatus = useCallback((status: Partial<UseDiagnosticFormState["sendStatus"]>) => {
+    setState((prev) => ({
+      ...prev,
+      sendStatus: { ...prev.sendStatus, ...status },
+    }));
+  }, []);
+
   const reset = useCallback(() => {
     setState(initialState);
   }, []);
@@ -102,6 +146,9 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
   return [
     state,
     {
+      setNombreCompleto,
+      setTelefono,
+      setCorreo,
       setCliente,
       setUbicacion,
       setFecha,
@@ -111,6 +158,7 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
       setEnviado,
       setEnviando,
       setError,
+      setSendStatus,
       reset,
     },
   ];

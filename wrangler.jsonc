@@ -5,4 +5,8 @@
   "compatibility_flags": ["nodejs_compat"],
   "main": "src/server.ts",
   "routes": [{ "pattern": "dev-integra.com", "custom_domain": true }],
+  "vars": {
+    "INTERNAL_REPORT_EMAIL": "desarrollo.grupointegra@gmail.com",
+    "MAIL_FROM": "desarrollo.grupointegra@gmail.com",
+  },
 }
