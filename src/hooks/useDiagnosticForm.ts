@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { TOTAL_QUESTIONS } from "@/constants/diagnostics";
 import type { DiagnosticStatus } from "@/types/diagnostic";
 
 export interface UseDiagnosticFormState {
@@ -10,9 +11,7 @@ export interface UseDiagnosticFormState {
   fecha: string;
   respuestas: DiagnosticStatus[];
   observaciones: string[];
-  obsGenerales: string;
   enviado: boolean;
-  enviando: boolean;
   error: string;
   sendStatus: {
     sent: boolean;
@@ -33,9 +32,7 @@ export interface UseDiagnosticFormActions {
   setFecha: (value: string) => void;
   setRespuesta: (index: number, value: DiagnosticStatus) => void;
   setObservacion: (index: number, value: string) => void;
-  setObsGenerales: (value: string) => void;
   setEnviado: (value: boolean) => void;
-  setEnviando: (value: boolean) => void;
   setError: (value: string) => void;
   setSendStatus: (status: Partial<UseDiagnosticFormState["sendStatus"]>) => void;
   reset: () => void;
@@ -48,11 +45,9 @@ const initialState: UseDiagnosticFormState = {
   cliente: "",
   ubicacion: "",
   fecha: "",
-  respuestas: Array(21).fill(null),
-  observaciones: Array(21).fill(""),
-  obsGenerales: "",
+  respuestas: Array(TOTAL_QUESTIONS).fill(null),
+  observaciones: Array(TOTAL_QUESTIONS).fill(""),
   enviado: false,
-  enviando: false,
   error: "",
   sendStatus: {
     sent: false,
@@ -112,18 +107,8 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
     });
   }, []);
 
-  const setObsGenerales = useCallback(
-    (value: string) => setState((prev) => ({ ...prev, obsGenerales: value })),
-    [],
-  );
-
   const setEnviado = useCallback(
     (value: boolean) => setState((prev) => ({ ...prev, enviado: value })),
-    [],
-  );
-
-  const setEnviando = useCallback(
-    (value: boolean) => setState((prev) => ({ ...prev, enviando: value })),
     [],
   );
 
@@ -154,9 +139,7 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
       setFecha,
       setRespuesta,
       setObservacion,
-      setObsGenerales,
       setEnviado,
-      setEnviando,
       setError,
       setSendStatus,
       reset,

@@ -1,121 +1,100 @@
 # Formulario Integra
 
-Formulario Integra es una aplicación web para realizar diagnósticos de infraestructura IT. El proyecto concentra un formulario de 21 puntos de revisión, calcula el estado general del diagnóstico y genera un reporte PDF con la identidad visual de Integra Industrial Networks.
+Aplicación web para diagnóstico de infraestructura IT con flujo completo de captura, evaluación, generación de PDF y envío de reportes por correo.
 
 ## Funcionalidad
 
-- Captura de cliente, ubicación y fecha del diagnóstico.
-- Evaluación de 21 puntos técnicos de infraestructura.
-- Observaciones por punto de revisión y observaciones generales.
-- Cálculo automático de puntuación y valoración del estado de salud.
-- Vista de resultados con gráfica y acciones de reporte.
-- Generación de PDF con formato profesional.
-- Preparación del payload para integración posterior con backend o servicio de envío.
+- Captura de contacto, cliente, ubicación y fecha.
+- Evaluación de 21 puntos técnicos con estado `Saludable`/`Crítico`.
+- Observaciones por punto de revisión.
+- Cálculo automático de puntuación y semáforo de salud.
+- Generación y descarga de PDF.
+- Envío de reporte al cliente y copia interna por correo con Resend + React Email.
 
 ## Stack
 
 - React 19
-- TanStack Start y TanStack Router
-- TanStack React Query
+- TanStack Start + TanStack Router
 - Vite
 - Tailwind CSS
-- Recharts
-- Lucide React
-- jsPDF y html2canvas-pro
-- Cloudflare Workers / Wrangler
+- jsPDF + html2canvas-pro
 
-## Estructura
+## Arquitectura
 
 ```text
 src/
-├── assets/                    # Logotipo e imagen de fondo
 ├── components/
-│   ├── form/                  # Campos superiores del formulario
-│   ├── results/               # Acciones y visualización de resultados
-│   ├── DiagnosticoIT.tsx      # Formulario principal
+│   ├── DiagnosticoIT.tsx
 │   └── DiagnosticoPrintView.tsx
-├── constants/
-│   └── diagnostics.ts         # Preguntas, umbrales y configuración visual
-├── hooks/
-│   └── useDiagnosticForm.ts   # Estado del formulario
-├── routes/                    # Rutas TanStack
+├── constants/diagnostics.ts
+├── emails/
+│   ├── DiagnosticReportEmail.tsx
+│   └── components/
+│       ├── EmailFooter.tsx
+│       ├── EmailHeader.tsx
+│       ├── StatusCard.tsx
+│       └── SummaryCard.tsx
+├── hooks/useDiagnosticForm.ts
+├── server/
+│   ├── diagnostic-service.ts
+│   ├── mailer.ts
+│   └── resend.ts
 ├── services/
-│   ├── diagnostic.ts          # Validación, cálculo y payload
-│   └── pdf.ts                 # Generación de PDF
-├── types/
-│   └── diagnostic.ts          # Tipos del dominio
+│   ├── diagnostic.ts        # Cliente: validación/cálculo/submit API
+│   └── pdf.ts               # Generación PDF en navegador
+├── types/diagnostic.ts
+├── routes/
 ├── router.tsx
-├── server.ts
-├── start.ts
-└── styles.css
+├── server.ts                # API /api/diagnostic
+└── start.ts
+```
+
+## Variables de entorno
+
+Crea un `.env` basado en `.env.example`:
+
+```bash
+INTERNAL_REPORT_EMAIL=diagnosticos@integraindustrialnetworks.com
+MAIL_FROM=diagnosticos@integraindustrialnetworks.com
+RESEND_API_KEY=tu_api_key_resend
+DIAGNOSTIC_API_KEY=opcional_api_key_backend
 ```
 
 ## Desarrollo
 
-Instalar dependencias:
-
 ```bash
 npm install
-```
-
-Levantar el servidor local:
-
-```bash
 npm run dev
 ```
 
-La aplicación queda disponible en:
+App local:
 
 ```text
 http://localhost:3000
 ```
 
-Levantar la aplicación para usarla mediante Cloudflare Tunnel:
-
-```bash
-npm run dev:tunnel
-```
-
-Con la ruta publicada del túnel apuntando a `http://localhost:3000`, la aplicación queda disponible en:
-
-```text
-https://app-procedures.dev-integra.com
-```
-
-Para correr una versión más parecida a producción detrás del túnel:
-
-```bash
-npm run start:tunnel
-```
-
-La ruta `api-procedures.dev-integra.com` debe apuntar a un backend separado escuchando en `http://localhost:8000`. Este repositorio sólo contiene la aplicación web.
-
-Crear build de producción:
-
-```bash
-npm run build
-```
-
-Previsualizar el build:
-
-```bash
-npm run preview
-```
-
-## Calidad
+## Build de producción
 
 ```bash
 npm run lint
-npm run format
+npm run build
+npm run preview
 ```
 
-## Integración
+## API interna
 
-La función `submitDiagnosticReport` en `src/services/diagnostic.ts` centraliza el punto de integración para un backend, API propia o servicio de envío. La UI no depende de una implementación específica, por lo que la conexión puede añadirse sin modificar el flujo visual del formulario.
+Endpoint: `POST /api/diagnostic`
 
-## Despliegue
+Controles aplicados en backend:
 
-El proyecto está configurado para Vite, TanStack Start y Cloudflare Workers mediante `wrangler.jsonc`. El build genera los artefactos necesarios dentro de `dist/`.
+- Validación estricta del payload.
+- Normalización y límites de longitud de campos.
+- Re-cálculo server-side de puntuación/valoración.
+- Escape de contenido en HTML de correo.
+- Render de correo HTML con templates React Email.
+- Rate limiting básico por IP (`429`).
+- API key opcional por header `x-diagnostic-api-key` (`401`).
+- Manejo de errores con códigos HTTP consistentes.
 
 ## Licencia
 

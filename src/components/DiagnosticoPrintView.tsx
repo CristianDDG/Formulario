@@ -16,11 +16,9 @@ export interface PrintViewProps {
   preguntas: { text: string; icon?: LucideIcon }[];
   respuestas: Estado[];
   observaciones: string[];
-  obsGenerales: string;
   porcentaje: number;
   puntos: number;
   valoracion: string;
-  semaforoColor: string;
 }
 
 const NAVY = "#082247";
@@ -157,7 +155,15 @@ function Gauge({ porcentaje }: { porcentaje: number }) {
   );
 }
 
-function FieldBlock({ label, value }: { label: string; value: string }) {
+function FieldBlock({
+  label,
+  value,
+  multiline = false,
+}: {
+  label: string;
+  value: string;
+  multiline?: boolean;
+}) {
   return (
     <div
       style={{
@@ -190,14 +196,16 @@ function FieldBlock({ label, value }: { label: string; value: string }) {
           <div
             style={{
               marginTop: "3px",
-              minHeight: "16px",
+              minHeight: multiline ? "32px" : "16px",
               borderBottom: "2px solid rgba(255,255,255,0.75)",
               fontSize: "12px",
               fontWeight: 700,
               color: "#FFFFFF",
-              whiteSpace: "nowrap",
+              whiteSpace: multiline ? "normal" : "nowrap",
               overflow: "hidden",
-              textOverflow: "ellipsis",
+              textOverflow: multiline ? "clip" : "ellipsis",
+              lineHeight: multiline ? 1.25 : 1.1,
+              wordBreak: multiline ? "break-word" : "normal",
             }}
           >
             {value || ""}
@@ -249,7 +257,7 @@ function ValuationRows({ valoracion }: { valoracion: string }) {
   ];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%" }}>
       {rows.map((row) => {
         const active = row.label === valoracion;
 
@@ -259,18 +267,18 @@ function ValuationRows({ valoracion }: { valoracion: string }) {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
-              background: active ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)",
-              border: `1.5px solid ${active ? "#FFFFFF" : `${row.color}55`}`,
+              gap: "12px",
+              background: active ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.06)",
+              border: `1.5px solid ${active ? "rgba(255,255,255,0.82)" : "rgba(255,255,255,0.15)"}`,
               borderRadius: "8px",
-              padding: "8px 10px",
+              padding: "9px 12px",
               color: "#FFFFFF",
             }}
           >
             <span
               style={{
-                width: "24px",
-                height: "24px",
+                width: "32px",
+                height: "32px",
                 borderRadius: "50%",
                 background: row.color,
                 border: "1px solid rgba(255,255,255,0.72)",
@@ -281,7 +289,12 @@ function ValuationRows({ valoracion }: { valoracion: string }) {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "13px", fontWeight: 800 }}>{row.range}</div>
               <div
-                style={{ marginTop: "1px", fontSize: "10px", fontWeight: 700, color: "#D7E1EE" }}
+                style={{
+                  marginTop: "1px",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  color: "rgba(255,255,255,0.78)",
+                }}
               >
                 {row.label}
               </div>
@@ -295,15 +308,15 @@ function ValuationRows({ valoracion }: { valoracion: string }) {
 }
 
 const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref) => {
-  const medioContacto = [p.telefono, p.correo].filter(Boolean).join(" / ");
+  const medioContacto = [p.telefono, p.correo].filter(Boolean).join("\n");
 
   return (
     <div
       ref={ref}
       style={
         {
-          width: "794px",
-          minHeight: "1123px",
+          width: "210mm",
+          minHeight: "297mm",
           overflow: "hidden",
           background: "#FFFFFF",
           fontFamily: "Arial, Helvetica, sans-serif",
@@ -392,7 +405,7 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
         }}
       >
         <FieldBlock label="CONTACTO" value={p.nombreCompleto} />
-        <FieldBlock label="MEDIO DE CONTACTO" value={medioContacto} />
+        <FieldBlock label="MEDIO DE CONTACTO" value={medioContacto} multiline />
         <FieldBlock label="FECHA" value={p.fecha} />
         <FieldBlock label="CLIENTE" value={p.cliente} />
         <FieldBlock label="UBICACIÓN" value={p.ubicacion} />
@@ -524,7 +537,7 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
+          gridTemplateColumns: "1fr 1fr",
           gap: "12px",
           padding: "16px",
           background: "#EEF3F8",
@@ -546,7 +559,7 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
           <div
             style={{
               marginBottom: "10px",
-              fontSize: "12px",
+              fontSize: "10px",
               fontWeight: 800,
               letterSpacing: "0.5px",
             }}
@@ -586,47 +599,6 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
           </div>
           <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
             <ValuationRows valoracion={p.valoracion} />
-          </div>
-        </div>
-
-        {/* Observaciones Generales */}
-        <div
-          style={{
-            background: NAVY,
-            borderRadius: "8px",
-            padding: "14px",
-            color: "#FFFFFF",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-          }}
-        >
-          <div
-            style={{
-              marginBottom: "10px",
-              textAlign: "center",
-              fontSize: "12px",
-              fontWeight: 800,
-              letterSpacing: "0.5px",
-            }}
-          >
-            OBSERVACIONES GENERALES
-          </div>
-          <div
-            style={{
-              flex: 1,
-              background: "#FFFFFF",
-              borderRadius: "6px",
-              padding: "10px",
-              color: "#334155",
-              fontSize: "10px",
-              lineHeight: 1.4,
-              overflow: "hidden",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {p.obsGenerales || "(Sin observaciones)"}
           </div>
         </div>
       </div>

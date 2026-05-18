@@ -21,17 +21,15 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { DIAGNOSTIC_QUESTIONS, TOTAL_QUESTIONS } from "@/constants/diagnostics";
+import { DIAGNOSTIC_QUESTIONS, EMAIL_CONFIG, TOTAL_QUESTIONS } from "@/constants/diagnostics";
 import { useDiagnosticForm } from "@/hooks/useDiagnosticForm";
 import {
-  buildReportPayload,
   calculateDiagnosticScore,
   getHealthStatus,
-  submitDiagnosticReport,
   validateFormData,
   finalizeAndSendDiagnosis,
 } from "@/services/diagnostic";
-import { generatePDFFromHTML } from "@/services/pdf";
+import { generatePDFFromHTML, generatePDFBlobFromHTML } from "@/services/pdf";
 import type { DiagnosticStatus } from "@/types/diagnostic";
 import DiagnosticoPrintView from "./DiagnosticoPrintView";
 
@@ -314,6 +312,20 @@ function AnswerOption({
   );
 }
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  const arrayBuffer = await blob.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const chunk = bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length));
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
 export default function DiagnosticoIT() {
   const [state, actions] = useDiagnosticForm();
   const [descargando, setDescargando] = useState(false);
@@ -460,9 +472,27 @@ export default function DiagnosticoIT() {
   };
 
   const handleFinalizeDiagnosis = async () => {
-    if (!ensureComplete()) return;
+    if (!ensureComplete() || !printRef.current) return;
 
     actions.setSendStatus({ sending: true, error: undefined });
+
+    const visualPdfResult = await generatePDFBlobFromHTML(printRef.current, {
+      filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
+    });
+
+    if (!visualPdfResult.success || !visualPdfResult.pdfBlob) {
+      const generationError =
+        visualPdfResult.error || "No se pudo generar el PDF visual para el correo.";
+      actions.setSendStatus({
+        sent: false,
+        sending: false,
+        error: generationError,
+      });
+      actions.setError(generationError);
+      return;
+    }
+
+    const pdfBase64 = await blobToBase64(visualPdfResult.pdfBlob);
 
     const result = await finalizeAndSendDiagnosis(
       state.nombreCompleto,
@@ -473,7 +503,10 @@ export default function DiagnosticoIT() {
       state.fecha,
       state.respuestas,
       state.observaciones,
-      state.obsGenerales,
+      {
+        filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
+        base64: pdfBase64,
+      },
     );
 
     if (result.success && result.sendStatus) {
@@ -506,7 +539,6 @@ export default function DiagnosticoIT() {
       state.ubicacion.trim() !== "" ||
       state.fecha.trim() !== "" ||
       respondidas > 0 ||
-      state.obsGenerales.trim() !== "" ||
       state.observaciones.some((observacion) => observacion.trim() !== "");
 
     if (
@@ -874,7 +906,7 @@ export default function DiagnosticoIT() {
                   <div>
                     <div className="font-black text-[#082247]">
                       {isComplete
-                        ? "Diagnóstico listo para generar"
+                        ? "Reporte listo para enviar"
                         : "Completa el diagnóstico para habilitar las acciones"}
                     </div>
                     <div className="text-sm font-semibold text-slate-500">
@@ -895,7 +927,7 @@ export default function DiagnosticoIT() {
                 </button>
               </div>
 
-              <section id="diagnostic-summary" className="grid gap-3 md:grid-cols-3">
+              <section id="diagnostic-summary" className="grid gap-3 md:grid-cols-2">
                 <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
                   <div className="mb-4 text-center text-sm font-black uppercase">
                     Puntuación total
@@ -923,25 +955,6 @@ export default function DiagnosticoIT() {
                       </span>
                     </div>
                   )}
-                </div>
-
-                <div className="flex flex-col rounded-lg bg-[#082247] p-6 text-white shadow-sm">
-                  <label
-                    htmlFor="observaciones-generales"
-                    className="mb-4 block text-center text-sm font-black uppercase"
-                  >
-                    Observaciones generales
-                  </label>
-                  <textarea
-                    id="observaciones-generales"
-                    value={state.obsGenerales}
-                    onChange={(event) => {
-                      actions.setObsGenerales(event.target.value);
-                      markDirty();
-                    }}
-                    placeholder="Agrega recomendaciones, hallazgos críticos o próximos pasos para el cliente."
-                    className="flex-1 w-full resize-none rounded-md border border-white/20 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500"
-                  />
                 </div>
               </section>
 
@@ -980,8 +993,8 @@ export default function DiagnosticoIT() {
                       <div>
                         <div className="font-semibold">Reporte listo para enviar</div>
                         <div className="text-sm text-slate-600">
-                          Cliente: {state.correo} · Copia interna:
-                          diagnosticos@integraindustrialnetworks.com
+                          Cliente: {state.correo} · Copia interna:{" "}
+                          {EMAIL_CONFIG.internalReportEmail}
                         </div>
                       </div>
                     </div>
@@ -1034,7 +1047,7 @@ export default function DiagnosticoIT() {
                       type="button"
                       onClick={handleDownloadPDF}
                       disabled={descargando || !isComplete}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-45"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
                     >
                       <Download className="h-4 w-4" />
                       {descargando ? "Generando..." : "Descargar PDF"}
@@ -1042,7 +1055,7 @@ export default function DiagnosticoIT() {
                     <button
                       type="button"
                       onClick={handleReset}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
                     >
                       <RotateCcw className="h-4 w-4" />
                       Nuevo diagnóstico
@@ -1109,11 +1122,9 @@ export default function DiagnosticoIT() {
                     preguntas={DIAGNOSTIC_QUESTIONS}
                     respuestas={state.respuestas}
                     observaciones={state.observaciones}
-                    obsGenerales={state.obsGenerales}
                     porcentaje={porcentaje}
                     puntos={puntos}
                     valoracion={healthStatus.label}
-                    semaforoColor={healthStatus.semaforo}
                   />
                 </div>
               </div>
@@ -1142,11 +1153,9 @@ export default function DiagnosticoIT() {
           preguntas={DIAGNOSTIC_QUESTIONS}
           respuestas={state.respuestas}
           observaciones={state.observaciones}
-          obsGenerales={state.obsGenerales}
           porcentaje={porcentaje}
           puntos={puntos}
           valoracion={healthStatus.label}
-          semaforoColor={healthStatus.semaforo}
         />
       </div>
     </div>

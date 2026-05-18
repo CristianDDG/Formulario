@@ -93,6 +93,6 @@ export const STATUS_CONFIG = {
 };
 
 export const EMAIL_CONFIG = {
-  internalReportEmail: "diagnosticos@integraindustrialnetworks.com",
-  mailFrom: "diagnosticos@integraindustrialnetworks.com",
+  internalReportEmail: "desarrollo.grupointegra@gmail.com",
+  mailFrom: "desarrollo.grupointegra@gmail.com",
 };

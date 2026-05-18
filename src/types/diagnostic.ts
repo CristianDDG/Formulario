@@ -1,34 +1,4 @@
-/**
- * Type definitions for the Diagnostic IT application
- */
-
 export type DiagnosticStatus = "si" | "no" | null;
-
-export interface DiagnosticFormData {
-  nombreCompleto: string;
-  telefono: string;
-  correo: string;
-  cliente: string;
-  ubicacion: string;
-  fecha: string;
-}
-
-export interface DiagnosticResult {
-  nombreCompleto: string;
-  telefono: string;
-  correo: string;
-  cliente: string;
-  ubicacion: string;
-  fecha: string;
-  respuestas: DiagnosticStatus[];
-  observaciones: string[];
-  obsGenerales: string;
-  puntos: number;
-  total: number;
-  porcentaje: number;
-  valoracion: string;
-  timestamp: string;
-}
 
 export interface SemaforoResult {
   label: string;
@@ -52,7 +22,6 @@ export interface DiagnosticReportPayload {
     estado: "Saludable" | "Crítico";
     observacion: string;
   }>;
-  observacionesGenerales: string;
   puntuacion: {
     puntos: number;
     total: number;
@@ -64,12 +33,7 @@ export interface DiagnosticReportPayload {
 
 export interface EmailConfig {
   internalReportEmail: string;
-  smtpHost?: string;
-  smtpPort?: number;
-  smtpUser?: string;
-  smtpPass?: string;
   mailFrom: string;
-  resendApiKey?: string;
 }
 
 export interface SendStatus {
