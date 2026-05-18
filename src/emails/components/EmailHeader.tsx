@@ -29,7 +29,7 @@ export function EmailHeader({ generatedAtLabel, logoUrl }: EmailHeaderProps) {
       </Text>
       <Row>
         <Column style={{ width: "34%", padding: "20px 0 20px 24px", verticalAlign: "middle" }}>
-          <Img src={logoUrl} alt="Integra Industrial Networks" width="164" height="92" />
+          <Img src={logoUrl} alt="Integra Industrial Networks" width="164" height="164" />
         </Column>
         <Column style={{ width: "66%", padding: "20px 24px 24px", verticalAlign: "middle" }}>
           <Text

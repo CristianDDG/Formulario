@@ -1,6 +1,7 @@
 import { EMAIL_CONFIG, STATUS_CONFIG, TOTAL_QUESTIONS } from "@/constants/diagnostics";
 import type { DiagnosticReportPayload } from "@/types/diagnostic";
 import { sendDiagnosticReportEmails } from "./mailer";
+import { isValidEmail } from "@/lib/utils";
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
@@ -28,11 +29,6 @@ interface SubmissionInput {
   payload: unknown;
   pdfBase64?: string;
   pdfFilename?: string;
-}
-
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }
 
 function normalizeText(raw: unknown, label: string, maxLength: number): string {
@@ -122,7 +118,7 @@ function validateAndNormalizePayload(input: unknown): DiagnosticReportPayload {
     return {
       n,
       pregunta: normalizeText(record.pregunta, `Pregunta ${index + 1}`, 220),
-      estado,
+      estado: estado as "Saludable" | "Crítico",
       observacion: normalizeObservation(record.observacion, `Observación ${index + 1}`, 1200),
     };
   });

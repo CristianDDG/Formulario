@@ -5,6 +5,7 @@ import {
   TOTAL_QUESTIONS,
 } from "@/constants/diagnostics";
 import type { DiagnosticReportPayload, DiagnosticStatus, SemaforoResult } from "@/types/diagnostic";
+import { isValidEmail } from "@/lib/utils";
 
 export function calculateDiagnosticScore(respuestas: DiagnosticStatus[]) {
   const puntos = respuestas.filter((r) => r === "si").length;
@@ -20,11 +21,6 @@ export function getHealthStatus(porcentaje: number): SemaforoResult {
     return STATUS_CONFIG.medium;
   }
   return STATUS_CONFIG.critical;
-}
-
-export function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }
 
 export function validateFormData(

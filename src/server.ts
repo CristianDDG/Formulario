@@ -18,6 +18,7 @@ type Env = {
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 20;
 const requestCounter = new Map<string, { count: number; windowStart: number }>();
+let lastCleanup = Date.now();
 
 function getRequestClientKey(request: Request): string {
   const forwardedFor = request.headers.get("x-forwarded-for");
@@ -31,6 +32,17 @@ function getRequestClientKey(request: Request): string {
 
 function isRateLimited(request: Request): boolean {
   const now = Date.now();
+
+  // Prune old IP records periodically to prevent memory leaks
+  if (now - lastCleanup > RATE_LIMIT_WINDOW_MS) {
+    for (const [k, v] of requestCounter.entries()) {
+      if (now - v.windowStart > RATE_LIMIT_WINDOW_MS) {
+        requestCounter.delete(k);
+      }
+    }
+    lastCleanup = now;
+  }
+
   const key = getRequestClientKey(request);
   const current = requestCounter.get(key);
 

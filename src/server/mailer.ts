@@ -3,12 +3,19 @@ import { createElement } from "react";
 import { EMAIL_CONFIG } from "@/constants/diagnostics";
 import DiagnosticReportEmail from "@/emails/DiagnosticReportEmail";
 import type { DiagnosticReportPayload } from "@/types/diagnostic";
+import {
+  EMAIL_LOGO_CID_SRC,
+  getEmailInlineLogoAttachment,
+  type EmailInlineLogoAttachment,
+} from "./email-assets";
 import { getResendClient } from "./resend";
+import { isValidEmail } from "@/lib/utils";
 
 interface MailerEnv {
   INTERNAL_REPORT_EMAIL?: string;
   MAIL_FROM?: string;
   RESEND_API_KEY?: string;
+  PUBLIC_LOGO_URL?: string;
 }
 
 interface MailAttachment {
@@ -16,15 +23,17 @@ interface MailAttachment {
   base64Content: string;
 }
 
+interface ResendAttachment {
+  filename: string;
+  content: string;
+  contentId?: string;
+  contentType?: string;
+}
+
 interface MailDeliveryResult {
   sentAt: string;
   clientEmail: string;
   internalEmail: string;
-}
-
-function isValidEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
 }
 
 function resolveMailFrom(env: MailerEnv): string {
@@ -57,6 +66,11 @@ function resolveInternalRecipients(env: MailerEnv): string[] {
   return [...new Set(recipients)];
 }
 
+function resolveLogoUrl(env: MailerEnv): string {
+  const url = (env.PUBLIC_LOGO_URL || process.env.PUBLIC_LOGO_URL || "").trim();
+  return url || EMAIL_LOGO_CID_SRC;
+}
+
 function formatTimestampLabel(timestamp: string): string {
   const parsed = new Date(timestamp);
   if (Number.isNaN(parsed.getTime())) {
@@ -71,6 +85,30 @@ function formatTimestampLabel(timestamp: string): string {
   });
 }
 
+function buildResendAttachments(
+  pdfAttachment: MailAttachment,
+  inlineLogo?: EmailInlineLogoAttachment,
+): ResendAttachment[] {
+  const attachments: ResendAttachment[] = [
+    {
+      filename: pdfAttachment.filename,
+      content: pdfAttachment.base64Content,
+      contentType: "application/pdf",
+    },
+  ];
+
+  if (inlineLogo) {
+    attachments.push({
+      filename: inlineLogo.filename,
+      content: inlineLogo.content,
+      contentId: inlineLogo.contentId,
+      contentType: inlineLogo.contentType,
+    });
+  }
+
+  return attachments;
+}
+
 async function sendEmailViaResend(input: {
   env: MailerEnv;
   from: string;
@@ -79,6 +117,7 @@ async function sendEmailViaResend(input: {
   html: string;
   text: string;
   attachment: MailAttachment;
+  inlineLogo?: EmailInlineLogoAttachment;
 }) {
   const resend = getResendClient(input.env);
 
@@ -88,12 +127,7 @@ async function sendEmailViaResend(input: {
     subject: input.subject,
     html: input.html,
     text: input.text,
-    attachments: [
-      {
-        filename: input.attachment.filename,
-        content: input.attachment.base64Content,
-      },
-    ],
+    attachments: buildResendAttachments(input.attachment, input.inlineLogo),
   });
 
   if (error) {
@@ -115,10 +149,15 @@ export async function sendDiagnosticReportEmails(
   }
 
   const generatedAtLabel = formatTimestampLabel(payload.timestamp);
+
+  // Decide whether to use absolute public logo URL or fallback inline CID logo
+  const logoUrl = resolveLogoUrl(env);
+  const isCidLogo = logoUrl.startsWith("cid:");
+  const inlineLogo = isCidLogo ? getEmailInlineLogoAttachment() : undefined;
+
   const emailBaseProps = {
     generatedAtLabel,
-    logoUrl:
-      "https://www.integraindustrialnetworks.com/wp-content/uploads/2024/11/integra-logo.png",
+    logoUrl,
     websiteUrl: "https://www.integraindustrialnetworks.com",
     supportEmail: internalRecipients[0],
     supportPhone: "442 749 0997",
@@ -148,6 +187,7 @@ export async function sendDiagnosticReportEmails(
     html: clientHtml,
     text: clientText,
     attachment,
+    inlineLogo,
   });
 
   const internalHtml = await render(
@@ -167,6 +207,7 @@ export async function sendDiagnosticReportEmails(
       html: internalHtml,
       text: internalText,
       attachment,
+      inlineLogo,
     });
   }
 
