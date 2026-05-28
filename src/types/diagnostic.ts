@@ -1,4 +1,5 @@
 export type DiagnosticStatus = "si" | "no" | null;
+export type DiagnosticValue = string | number | boolean | null;
 
 export interface SemaforoResult {
   label: string;
@@ -20,6 +21,8 @@ export interface DiagnosticReportPayload {
     n: number;
     pregunta: string;
     estado: "Saludable" | "Crítico";
+    valorExacto?: string;
+    riesgoAsociado?: string;
     observacion: string;
   }>;
   puntuacion: {

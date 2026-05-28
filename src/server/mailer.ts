@@ -183,7 +183,7 @@ export async function sendDiagnosticReportEmails(
     env,
     from,
     to: [clientRecipient],
-    subject: `Diagnóstico de Salud IT - ${payload.cliente}`,
+    subject: `Diagnóstico Técnico IT - ${payload.cliente}`,
     html: clientHtml,
     text: clientText,
     attachment,

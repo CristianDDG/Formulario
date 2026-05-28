@@ -119,6 +119,9 @@ function validateAndNormalizePayload(input: unknown): DiagnosticReportPayload {
       n,
       pregunta: normalizeText(record.pregunta, `Pregunta ${index + 1}`, 220),
       estado: estado as "Saludable" | "Crítico",
+      valorExacto: typeof record.valorExacto === "string" ? record.valorExacto.trim() : undefined,
+      riesgoAsociado:
+        typeof record.riesgoAsociado === "string" ? record.riesgoAsociado.trim() : undefined,
       observacion: normalizeObservation(record.observacion, `Observación ${index + 1}`, 1200),
     };
   });
@@ -248,10 +251,9 @@ async function generateDiagnosisPDF(payload: DiagnosticReportPayload): Promise<B
     cursorY += wrapped.length * (options.fontSize ?? 11) * 0.35 + 2;
   };
 
-  addSectionTitle("Diagnóstico de Salud de Infraestructura IT");
+  addSectionTitle("Diagnóstico Técnico de Infraestructura IT");
   addText(`Cliente: ${payload.cliente}`, { bold: true });
   addText(`Ubicación: ${payload.ubicacion}`);
-  addText(`Fecha: ${payload.fecha}`);
   addText(`Responsable: ${payload.contacto.nombreCompleto}`);
   addText(`Correo: ${payload.contacto.correo}`);
   addText(`Teléfono: ${payload.contacto.telefono || "No proporcionado"}`);
@@ -277,6 +279,34 @@ async function generateDiagnosisPDF(payload: DiagnosticReportPayload): Promise<B
     doc.text(wrapped, margin, cursorY);
     cursorY += wrapped.length * 5.5;
 
+    if (respuesta.valorExacto) {
+      const valText = `Valor capturado: ${respuesta.valorExacto}`;
+      const wrappedVal = doc.splitTextToSize(valText, pageWidth - margin * 2);
+      if (cursorY + wrappedVal.length * lineHeight > doc.internal.pageSize.getHeight() - margin) {
+        doc.addPage();
+        cursorY = margin;
+      }
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(9);
+      doc.text(wrappedVal, margin, cursorY);
+      cursorY += wrappedVal.length * 5.5;
+    }
+
+    if (respuesta.estado === "Crítico" && respuesta.riesgoAsociado) {
+      const riskText = respuesta.riesgoAsociado;
+      const wrappedRisk = doc.splitTextToSize(riskText, pageWidth - margin * 2);
+      if (cursorY + wrappedRisk.length * lineHeight > doc.internal.pageSize.getHeight() - margin) {
+        doc.addPage();
+        cursorY = margin;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor("#c2410c"); // Orange/Red
+      doc.setFontSize(9);
+      doc.text(wrappedRisk, margin, cursorY);
+      doc.setTextColor("#000000"); // Reset color
+      cursorY += wrappedRisk.length * 5.5 + 2;
+    }
+
     if (respuesta.observacion) {
       const observation = `Observación: ${respuesta.observacion}`;
       const wrappedObs = doc.splitTextToSize(observation, pageWidth - margin * 2);
@@ -290,8 +320,28 @@ async function generateDiagnosisPDF(payload: DiagnosticReportPayload): Promise<B
       cursorY += wrappedObs.length * 5.5 + 2;
     }
 
-    cursorY += 2;
+    cursorY += 3;
   }
+
+  cursorY += lineHeight;
+  addSectionTitle("¡Atención Inmediata!");
+  addText("¿Detectaste riesgos en tu diagnóstico?");
+  addText("Obtén un 20% de descuento en la remediación si nos contactas en las próximas 6 horas.", {
+    bold: true,
+  });
+
+  cursorY += 5;
+  doc.setTextColor("#22c55e");
+  doc.setFontSize(12);
+  doc.textWithLink(
+    "-> Clic aquí para contactar a Jaaziel por WhatsApp (442 749 0997)",
+    margin,
+    cursorY,
+    {
+      url: "https://wa.me/524427490997?text=Hola%20Jaaziel,%20acabo%20de%20hacer%20el%20diagn%C3%B3stico%20t%C3%A9cnico%20IT%20y%20quiero%20hacer%20v%C3%A1lido%20mi%20descuento%20del%2020%25",
+    },
+  );
+  doc.setTextColor("#000000");
 
   const pdfArrayBuffer = doc.output("arraybuffer");
   return new Blob([pdfArrayBuffer], { type: "application/pdf" });

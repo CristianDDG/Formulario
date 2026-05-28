@@ -9,13 +9,17 @@ Formulario Integra sigue una arquitectura por capas con separación entre fronte
 ```text
 UI Layer
   - src/components/*
+  - src/features/diagnostic/ui/*
   - src/routes/*
 
 Client Domain Layer
+  - src/features/diagnostic/hooks/*
+  - src/features/diagnostic/model/*
   - src/services/diagnostic.ts
   - src/hooks/useDiagnosticForm.ts
   - src/constants/diagnostics.ts
   - src/types/diagnostic.ts
+  - src/lib/gauge.ts
 
 Server Application Layer
   - src/server.ts
@@ -24,7 +28,9 @@ Server Application Layer
 
 ## Responsibilities
 
-- `DiagnosticoIT.tsx`: flujo de captura, navegación de preguntas y acciones de envío/PDF.
+- `DiagnosticoIT.tsx`: orquestador principal de flujo.
+- `features/diagnostic/hooks/*`: geolocalización y comportamiento de modal.
+- `features/diagnostic/ui/DiagnosticPreviewModal.tsx`: modal de vista previa de PDF.
 - `DiagnosticoPrintView.tsx`: vista printable para exportación y adjunto.
 - `services/diagnostic.ts`: cálculo de score, validación de formulario y submit al backend.
 - `server.ts`: entrypoint SSR + routing de API interna `/api/diagnostic`.
@@ -51,6 +57,9 @@ Server Application Layer
 ## Production Readiness Checklist
 
 - `npm run lint` sin errores.
+- `npm run typecheck` sin errores.
+- `npm run test` sin fallos.
 - `npm run build` exitoso (client + SSR).
+- `npm run validate` exitoso (lint estricto + typecheck + test + build).
 - Variables de entorno de correo configuradas en runtime.
 - Monitoreo de errores de envío SMTP/API.

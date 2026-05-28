@@ -1,5 +1,8 @@
 import React, { forwardRef } from "react";
 import type { LucideIcon } from "lucide-react";
+import { DIAGNOSTIC_QUESTIONS } from "@/constants/diagnostics";
+import { describeArc, polarPoint } from "@/lib/gauge";
+import type { DiagnosticValue } from "@/types/diagnostic";
 
 import logo from "@/assets/integra-logo.png";
 import bg from "@/assets/datacenter-bg.jpg";
@@ -15,6 +18,7 @@ export interface PrintViewProps {
   fecha: string;
   preguntas: { text: string; icon?: LucideIcon }[];
   respuestas: Estado[];
+  valores: DiagnosticValue[];
   observaciones: string[];
   porcentaje: number;
   puntos: number;
@@ -30,26 +34,6 @@ const RED = "#EF4444";
 const YELLOW = "#FACC15";
 const BORDER = "#D7E1EE";
 const TEXT = "#0F2442";
-
-function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const start = polarPoint(cx, cy, r, endAngle);
-  const end = polarPoint(cx, cy, r, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? "0" : "1";
-
-  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y}`;
-}
-
-function roundNumber(value: number, decimals = 4) {
-  return Number(value.toFixed(decimals));
-}
-
-function polarPoint(cx: number, cy: number, r: number, angle: number) {
-  const radians = ((angle - 180) * Math.PI) / 180;
-  return {
-    x: roundNumber(cx + r * Math.cos(radians)),
-    y: roundNumber(cy + r * Math.sin(radians)),
-  };
-}
 
 function Gauge({ porcentaje }: { porcentaje: number }) {
   const cx = 124;
@@ -251,9 +235,24 @@ function StatusMark({ status }: { status: Estado }) {
 
 function ValuationRows({ valoracion }: { valoracion: string }) {
   const rows = [
-    { color: GREEN, range: "85 - 100%", label: "SALUDABLE" },
-    { color: YELLOW, range: "70 - 84%", label: "MEDIO" },
-    { color: RED, range: "< 70%", label: "CRÍTICO" },
+    {
+      color: GREEN,
+      range: "85 - 100%",
+      label: "SALUDABLE",
+      description: "Operación estable con riesgos bajos y continuidad de servicio controlada.",
+    },
+    {
+      color: YELLOW,
+      range: "70 - 84%",
+      label: "MEDIO",
+      description: "Riesgos latentes que deben corregirse para evitar interrupciones futuras.",
+    },
+    {
+      color: RED,
+      range: "< 70%",
+      label: "CRÍTICO",
+      description: "Alta probabilidad de falla operativa; requiere intervención técnica inmediata.",
+    },
   ];
 
   return (
@@ -289,14 +288,20 @@ function ValuationRows({ valoracion }: { valoracion: string }) {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: "13px", fontWeight: 800 }}>{row.range}</div>
               <div
+                style={{ marginTop: "1px", fontSize: "10px", fontWeight: 700, color: "#FFFFFF" }}
+              >
+                {row.label}
+              </div>
+              <div
                 style={{
-                  marginTop: "1px",
-                  fontSize: "10px",
-                  fontWeight: 700,
+                  marginTop: "2px",
+                  fontSize: "9px",
+                  fontWeight: 600,
+                  lineHeight: 1.2,
                   color: "rgba(255,255,255,0.78)",
                 }}
               >
-                {row.label}
+                {row.description}
               </div>
             </div>
             {active && <span style={{ fontSize: "14px", fontWeight: 800 }}>✓</span>}
@@ -367,7 +372,7 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
           }}
         >
           <div style={{ fontSize: "32px", fontWeight: 900, lineHeight: 1.05, color: NAVY }}>
-            DIAGNÓSTICO DE SALUD
+            DIAGNÓSTICO TÉCNICO
           </div>
           <div
             style={{
@@ -411,127 +416,6 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
         <FieldBlock label="UBICACIÓN" value={p.ubicacion} />
         <FieldBlock label="TOTAL DE PUNTOS" value={String(p.preguntas.length)} />
       </div>
-
-      {/* Tabla de preguntas */}
-      <table
-        style={{
-          width: "100%",
-          borderCollapse: "collapse",
-          tableLayout: "fixed",
-          fontSize: "11px",
-        }}
-      >
-        <thead>
-          <tr style={{ background: NAVY, color: "#FFFFFF" }}>
-            <th
-              style={{
-                width: "48px",
-                padding: "10px 6px",
-                borderRight: "1px solid rgba(255,255,255,0.2)",
-                fontWeight: 800,
-                fontSize: "10px",
-                textAlign: "center",
-              }}
-            >
-              No.
-            </th>
-            <th
-              style={{
-                flex: 1,
-                padding: "10px 10px",
-                borderRight: "1px solid rgba(255,255,255,0.2)",
-                textAlign: "left",
-                fontWeight: 800,
-                fontSize: "10px",
-              }}
-            >
-              PUNTO DE REVISIÓN
-            </th>
-            <th
-              style={{
-                width: "90px",
-                padding: "10px 6px",
-                borderRight: "1px solid rgba(255,255,255,0.2)",
-                fontWeight: 800,
-                fontSize: "10px",
-                textAlign: "center",
-              }}
-            >
-              ESTADO
-            </th>
-            <th
-              style={{
-                flex: 1,
-                padding: "10px 10px",
-                textAlign: "left",
-                fontWeight: 800,
-                fontSize: "10px",
-              }}
-            >
-              OBSERVACIONES
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.preguntas.map((question, index) => {
-            return (
-              <tr key={question.text}>
-                <td
-                  style={{
-                    padding: "8px 6px",
-                    borderBottom: `1px solid ${BORDER}`,
-                    textAlign: "center",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    background: NAVY_SOFT,
-                    color: "#FFFFFF",
-                  }}
-                >
-                  {index + 1}
-                </td>
-                <td
-                  style={{
-                    padding: "8px 10px",
-                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
-                    borderBottom: `1px solid ${BORDER}`,
-                    fontSize: "10px",
-                  }}
-                >
-                  <span style={{ fontWeight: 600, color: TEXT, lineHeight: 1.2 }}>
-                    {question.text}
-                  </span>
-                </td>
-                <td
-                  style={{
-                    padding: "8px 6px",
-                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
-                    borderBottom: `1px solid ${BORDER}`,
-                    textAlign: "center",
-                  }}
-                >
-                  <StatusMark status={p.respuestas[index]} />
-                </td>
-                <td
-                  style={{
-                    padding: "8px 10px",
-                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
-                    borderBottom: `1px solid ${BORDER}`,
-                    color: "#53657D",
-                    lineHeight: 1.3,
-                    whiteSpace: "pre-wrap",
-                    wordBreak: "break-word",
-                    maxHeight: "40px",
-                    overflow: "hidden",
-                    fontSize: "10px",
-                  }}
-                >
-                  {p.observaciones[index] || ""}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
 
       {/* Sección de resultados */}
       <div
@@ -600,6 +484,194 @@ const DiagnosticoPrintView = forwardRef<HTMLDivElement, PrintViewProps>((p, ref)
           <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
             <ValuationRows valoracion={p.valoracion} />
           </div>
+        </div>
+      </div>
+
+      {/* Tabla de preguntas */}
+      <table
+        style={{
+          width: "100%",
+          borderCollapse: "collapse",
+          tableLayout: "fixed",
+          fontSize: "11px",
+        }}
+      >
+        <thead>
+          <tr style={{ background: NAVY, color: "#FFFFFF" }}>
+            <th
+              style={{
+                width: "48px",
+                padding: "10px 6px",
+                borderRight: "1px solid rgba(255,255,255,0.2)",
+                fontWeight: 800,
+                fontSize: "10px",
+                textAlign: "center",
+              }}
+            >
+              No.
+            </th>
+            <th
+              style={{
+                flex: 1,
+                padding: "10px 10px",
+                borderRight: "1px solid rgba(255,255,255,0.2)",
+                textAlign: "left",
+                fontWeight: 800,
+                fontSize: "10px",
+              }}
+            >
+              PUNTO DE REVISIÓN
+            </th>
+            <th
+              style={{
+                width: "90px",
+                padding: "10px 6px",
+                borderRight: "1px solid rgba(255,255,255,0.2)",
+                fontWeight: 800,
+                fontSize: "10px",
+                textAlign: "center",
+              }}
+            >
+              ESTADO
+            </th>
+            <th
+              style={{
+                flex: 1,
+                padding: "10px 10px",
+                textAlign: "left",
+                fontWeight: 800,
+                fontSize: "10px",
+              }}
+            >
+              OBSERVACIONES
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {p.preguntas.map((question, index) => {
+            const isCritical = p.respuestas[index] === "no";
+            const qDef = DIAGNOSTIC_QUESTIONS[index];
+            const hasValor =
+              p.valores[index] !== null &&
+              p.valores[index] !== undefined &&
+              p.valores[index] !== "";
+            const valorFormat =
+              hasValor && qDef.formatValue ? qDef.formatValue(p.valores[index]) : null;
+            const riesgo = isCritical ? qDef.riskText : null;
+
+            return (
+              <tr key={question.text}>
+                <td
+                  style={{
+                    padding: "8px 6px",
+                    borderBottom: `1px solid ${BORDER}`,
+                    textAlign: "center",
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    background: NAVY_SOFT,
+                    color: "#FFFFFF",
+                  }}
+                >
+                  {index + 1}
+                </td>
+                <td
+                  style={{
+                    padding: "8px 10px",
+                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
+                    borderBottom: `1px solid ${BORDER}`,
+                    fontSize: "10px",
+                  }}
+                >
+                  <span style={{ fontWeight: 600, color: TEXT, lineHeight: 1.2 }}>
+                    {question.text}
+                  </span>
+                  {valorFormat && (
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        fontSize: "9px",
+                        color: "#53657D",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Valor ingresado: <span style={{ fontWeight: 700 }}>{valorFormat}</span>
+                    </div>
+                  )}
+                </td>
+                <td
+                  style={{
+                    padding: "8px 6px",
+                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
+                    borderBottom: `1px solid ${BORDER}`,
+                    textAlign: "center",
+                  }}
+                >
+                  <StatusMark status={p.respuestas[index]} />
+                </td>
+                <td
+                  style={{
+                    padding: "8px 10px",
+                    background: index % 2 === 0 ? "#F8FAFC" : "#FFFFFF",
+                    borderBottom: `1px solid ${BORDER}`,
+                    color: "#53657D",
+                    lineHeight: 1.3,
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                    maxHeight: "40px",
+                    overflow: "hidden",
+                    fontSize: "10px",
+                  }}
+                >
+                  {riesgo && (
+                    <div style={{ color: "#C2410C", fontWeight: 700, marginBottom: "4px" }}>
+                      {riesgo}
+                    </div>
+                  )}
+                  {p.observaciones[index] && (
+                    <div style={{ fontWeight: 600, color: "#0F2442" }}>
+                      Nota:{" "}
+                      <span style={{ fontWeight: "normal", color: "#53657D" }}>
+                        {p.observaciones[index]}
+                      </span>
+                    </div>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* CTA de Descuento */}
+      <div
+        style={{
+          display: "block",
+          textDecoration: "none",
+          padding: "16px",
+          background: "#FFF5F0",
+          borderTop: "2px solid #FFEDD5",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ color: "#C2410C", fontSize: "16px", fontWeight: 900, marginBottom: "8px" }}>
+          ¡ATENCIÓN INMEDIATA!
+        </div>
+        <div style={{ color: "#431407", fontSize: "12px", fontWeight: 600, marginBottom: "12px" }}>
+          ¿Detectaste riesgos en tu diagnóstico? Obtén un 20% de descuento en la remediación si nos
+          contactas en las próximas 6 horas.
+        </div>
+        <div
+          style={{
+            display: "inline-block",
+            background: "#22C55E",
+            color: "#FFF",
+            padding: "8px 16px",
+            borderRadius: "4px",
+            fontSize: "12px",
+            fontWeight: "bold",
+          }}
+        >
+          Whatsapp: 442 749 0997
         </div>
       </div>
 

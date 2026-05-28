@@ -4,7 +4,12 @@ import {
   EMAIL_CONFIG,
   TOTAL_QUESTIONS,
 } from "@/constants/diagnostics";
-import type { DiagnosticReportPayload, DiagnosticStatus, SemaforoResult } from "@/types/diagnostic";
+import type {
+  DiagnosticReportPayload,
+  DiagnosticStatus,
+  DiagnosticValue,
+  SemaforoResult,
+} from "@/types/diagnostic";
 import { isValidEmail } from "@/lib/utils";
 
 export function calculateDiagnosticScore(respuestas: DiagnosticStatus[]) {
@@ -70,8 +75,9 @@ export function buildReportPayload(
   cliente: string,
   ubicacion: string,
   fecha: string,
-  preguntas: Array<{ text: string }>,
+  preguntas: typeof DIAGNOSTIC_QUESTIONS,
   respuestas: DiagnosticStatus[],
+  valores: DiagnosticValue[],
   observaciones: string[],
   puntos: number,
   porcentaje: number,
@@ -86,12 +92,20 @@ export function buildReportPayload(
     cliente,
     ubicacion,
     fecha,
-    respuestas: preguntas.map((p, i) => ({
-      n: i + 1,
-      pregunta: p.text,
-      estado: respuestas[i] === "si" ? "Saludable" : "Crítico",
-      observacion: observaciones[i] || "",
-    })),
+    respuestas: preguntas.map((q, i) => {
+      const isCritical = respuestas[i] === "no";
+      return {
+        n: i + 1,
+        pregunta: q.text,
+        estado: respuestas[i] === "si" ? "Saludable" : "Crítico",
+        valorExacto:
+          q.formatValue && valores[i] !== null && valores[i] !== undefined
+            ? q.formatValue(valores[i])
+            : undefined,
+        riesgoAsociado: isCritical ? q.riskText : undefined,
+        observacion: observaciones[i] || "",
+      };
+    }),
     puntuacion: {
       puntos,
       total: TOTAL_QUESTIONS,
@@ -125,6 +139,7 @@ export async function finalizeAndSendDiagnosis(
   ubicacion: string,
   fecha: string,
   respuestas: DiagnosticStatus[],
+  valores: DiagnosticValue[],
   observaciones: string[],
   pdfAttachment?: DiagnosticPdfAttachment,
 ): Promise<FinalizeResult> {
@@ -145,6 +160,7 @@ export async function finalizeAndSendDiagnosis(
       fecha,
       DIAGNOSTIC_QUESTIONS,
       respuestas,
+      valores,
       observaciones,
       puntos,
       porcentaje,

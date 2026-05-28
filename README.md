@@ -26,6 +26,15 @@ src/
 ├── components/
 │   ├── DiagnosticoIT.tsx
 │   └── DiagnosticoPrintView.tsx
+├── features/
+│   └── diagnostic/
+│       ├── hooks/
+│       │   ├── useGeolocation.ts
+│       │   └── usePreviewModal.ts
+│       ├── model/
+│       │   └── types.ts
+│       └── ui/
+│           └── DiagnosticPreviewModal.tsx
 ├── constants/diagnostics.ts
 ├── emails/
 │   ├── DiagnosticReportEmail.tsx
@@ -35,6 +44,7 @@ src/
 │       ├── StatusCard.tsx
 │       └── SummaryCard.tsx
 ├── hooks/useDiagnosticForm.ts
+├── lib/gauge.ts
 ├── server/
 │   ├── diagnostic-service.ts
 │   ├── mailer.ts
@@ -76,9 +86,17 @@ http://localhost:3000
 ## Build de producción
 
 ```bash
-npm run lint
+npm run lint:strict
+npm run typecheck
+npm run test
 npm run build
 npm run preview
+```
+
+Validación integral (CI/local):
+
+```bash
+npm run validate
 ```
 
 ## API interna

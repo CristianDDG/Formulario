@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { TOTAL_QUESTIONS } from "@/constants/diagnostics";
-import type { DiagnosticStatus } from "@/types/diagnostic";
+import type { DiagnosticStatus, DiagnosticValue } from "@/types/diagnostic";
 
 export interface UseDiagnosticFormState {
   nombreCompleto: string;
@@ -10,8 +10,8 @@ export interface UseDiagnosticFormState {
   ubicacion: string;
   fecha: string;
   respuestas: DiagnosticStatus[];
+  valores: DiagnosticValue[];
   observaciones: string[];
-  enviado: boolean;
   error: string;
   sendStatus: {
     sent: boolean;
@@ -29,37 +29,36 @@ export interface UseDiagnosticFormActions {
   setCorreo: (value: string) => void;
   setCliente: (value: string) => void;
   setUbicacion: (value: string) => void;
-  setFecha: (value: string) => void;
   setRespuesta: (index: number, value: DiagnosticStatus) => void;
+  setValor: (index: number, value: DiagnosticValue) => void;
   setObservacion: (index: number, value: string) => void;
-  setEnviado: (value: boolean) => void;
   setError: (value: string) => void;
   setSendStatus: (status: Partial<UseDiagnosticFormState["sendStatus"]>) => void;
   reset: () => void;
 }
 
-const initialState: UseDiagnosticFormState = {
+const createInitialState = (): UseDiagnosticFormState => ({
   nombreCompleto: "",
   telefono: "",
   correo: "",
   cliente: "",
   ubicacion: "",
-  fecha: "",
+  fecha: new Date().toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
   respuestas: Array(TOTAL_QUESTIONS).fill(null),
+  valores: Array(TOTAL_QUESTIONS).fill(null),
   observaciones: Array(TOTAL_QUESTIONS).fill(""),
-  enviado: false,
   error: "",
   sendStatus: {
     sent: false,
     sending: false,
   },
-};
+});
 
 /**
  * Hook for managing diagnostic form state and actions
  */
 export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormActions] {
-  const [state, setState] = useState<UseDiagnosticFormState>(initialState);
+  const [state, setState] = useState<UseDiagnosticFormState>(createInitialState);
 
   const setNombreCompleto = useCallback(
     (value: string) => setState((prev) => ({ ...prev, nombreCompleto: value })),
@@ -86,16 +85,19 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
     [],
   );
 
-  const setFecha = useCallback(
-    (value: string) => setState((prev) => ({ ...prev, fecha: value })),
-    [],
-  );
-
   const setRespuesta = useCallback((index: number, value: DiagnosticStatus) => {
     setState((prev) => {
       const next = [...prev.respuestas];
       next[index] = value;
       return { ...prev, respuestas: next };
+    });
+  }, []);
+
+  const setValor = useCallback((index: number, value: DiagnosticValue) => {
+    setState((prev) => {
+      const next = [...prev.valores];
+      next[index] = value;
+      return { ...prev, valores: next };
     });
   }, []);
 
@@ -106,11 +108,6 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
       return { ...prev, observaciones: next };
     });
   }, []);
-
-  const setEnviado = useCallback(
-    (value: boolean) => setState((prev) => ({ ...prev, enviado: value })),
-    [],
-  );
 
   const setError = useCallback(
     (value: string) => setState((prev) => ({ ...prev, error: value })),
@@ -125,7 +122,7 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
   }, []);
 
   const reset = useCallback(() => {
-    setState(initialState);
+    setState(createInitialState());
   }, []);
 
   return [
@@ -136,10 +133,9 @@ export function useDiagnosticForm(): [UseDiagnosticFormState, UseDiagnosticFormA
       setCorreo,
       setCliente,
       setUbicacion,
-      setFecha,
       setRespuesta,
+      setValor,
       setObservacion,
-      setEnviado,
       setError,
       setSendStatus,
       reset,
