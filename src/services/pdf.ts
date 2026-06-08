@@ -1,5 +1,14 @@
 /**
- * PDF generation utilities using html2canvas and jsPDF
+ * PDF generation utilities using html2canvas-pro and jsPDF.
+ *
+ * Supports two rendering strategies:
+ * 1. **Per-page** (preferred): If the source element contains children
+ *    with class `.pdf-page`, each child is captured individually and
+ *    placed on its own A4 page. This guarantees no content is ever
+ *    sliced across page boundaries.
+ * 2. **Legacy single-canvas**: Falls back to capturing the entire
+ *    element and slicing it into pages when `.pdf-page` children
+ *    are not found.
  */
 
 export interface PDFGenerationOptions {
@@ -16,15 +25,11 @@ const DEFAULT_OPTIONS: PDFGenerationOptions = {
   marginMm: 0,
 };
 
-async function buildPDFBlobFromHTMLElement(
-  element: HTMLElement,
-  options: PDFGenerationOptions = {},
-): Promise<Blob> {
-  const finalOptions = { ...DEFAULT_OPTIONS, ...options };
-  const { default: html2canvas } = await import("html2canvas-pro");
-  const { default: jsPDF } = await import("jspdf");
-
-  const images = Array.from(element.querySelectorAll("img"));
+/**
+ * Wait for every <img> inside `root` to finish loading.
+ */
+async function waitForImages(root: HTMLElement): Promise<void> {
+  const images = Array.from(root.querySelectorAll("img"));
   await Promise.all(
     images.map((img) =>
       img.complete && img.naturalWidth > 0
@@ -34,26 +39,31 @@ async function buildPDFBlobFromHTMLElement(
           }),
     ),
   );
+}
 
-  const renderScale = Math.max(
-    2,
-    Math.min(4, finalOptions.scale ?? Math.ceil((window.devicePixelRatio || 1) * 2)),
-  );
+/**
+ * Capture a single HTML element to a canvas via html2canvas-pro.
+ */
+async function captureElement(
+  element: HTMLElement,
+  renderScale: number,
+): Promise<HTMLCanvasElement> {
+  const { default: html2canvas } = await import("html2canvas-pro");
 
   const rect = element.getBoundingClientRect();
-  const sourceWidth = Math.max(element.scrollWidth, element.offsetWidth, Math.ceil(rect.width));
-  const sourceHeight = Math.max(element.scrollHeight, element.offsetHeight, Math.ceil(rect.height));
+  const w = Math.max(element.scrollWidth, element.offsetWidth, Math.ceil(rect.width));
+  const h = Math.max(element.scrollHeight, element.offsetHeight, Math.ceil(rect.height));
 
-  if (sourceWidth <= 0 || sourceHeight <= 0) {
+  if (w <= 0 || h <= 0) {
     throw new Error("No se pudo calcular el tamaño del contenido para exportar el PDF.");
   }
 
-  const canvas = await html2canvas(element, {
+  return html2canvas(element, {
     scale: renderScale,
-    width: sourceWidth,
-    height: sourceHeight,
-    windowWidth: sourceWidth,
-    windowHeight: sourceHeight,
+    width: w,
+    height: h,
+    windowWidth: w,
+    windowHeight: h,
     backgroundColor: "#ffffff",
     useCORS: true,
     allowTaint: true,
@@ -64,6 +74,24 @@ async function buildPDFBlobFromHTMLElement(
     scrollX: 0,
     scrollY: 0,
   });
+}
+
+/**
+ * Core: build a PDF Blob from an HTML element.
+ */
+async function buildPDFBlobFromHTMLElement(
+  element: HTMLElement,
+  options: PDFGenerationOptions = {},
+): Promise<Blob> {
+  const finalOptions = { ...DEFAULT_OPTIONS, ...options };
+  const { default: jsPDF } = await import("jspdf");
+
+  await waitForImages(element);
+
+  const renderScale = Math.max(
+    2,
+    Math.min(4, finalOptions.scale ?? Math.ceil((window.devicePixelRatio || 1) * 2)),
+  );
 
   const pdf = new jsPDF({
     orientation: "portrait",
@@ -75,9 +103,31 @@ async function buildPDFBlobFromHTMLElement(
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
+
+  /* ── Strategy 1: Explicit .pdf-page children ── */
+  const pages = Array.from(element.querySelectorAll<HTMLElement>(".pdf-page"));
+
+  if (pages.length > 0) {
+    for (let i = 0; i < pages.length; i++) {
+      const canvas = await captureElement(pages[i], renderScale);
+      const imgData = canvas.toDataURL("image/png", finalOptions.quality);
+
+      if (i > 0) {
+        pdf.addPage("a4", "portrait");
+      }
+
+      pdf.addImage(imgData, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+    }
+
+    return pdf.output("blob");
+  }
+
+  /* ── Strategy 2: Legacy single-canvas slice ── */
   const marginMm = Math.max(0, finalOptions.marginMm ?? DEFAULT_OPTIONS.marginMm ?? 0);
   const contentWidthMm = pageWidth - marginMm * 2;
   const contentHeightMm = pageHeight - marginMm * 2;
+
+  const canvas = await captureElement(element, renderScale);
   const fullWidthHeightMm = (canvas.height * contentWidthMm) / canvas.width;
   const imgData = canvas.toDataURL("image/png", finalOptions.quality);
 

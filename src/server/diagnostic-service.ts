@@ -334,11 +334,11 @@ async function generateDiagnosisPDF(payload: DiagnosticReportPayload): Promise<B
   doc.setTextColor("#22c55e");
   doc.setFontSize(12);
   doc.textWithLink(
-    "-> Clic aquí para contactar a Jaaziel por WhatsApp (442 749 0997)",
+    "-> Clic aquí para contactar a Ing. Jaaziel N. Flores Garcia por WhatsApp (442 749 0997)",
     margin,
     cursorY,
     {
-      url: "https://wa.me/524427490997?text=Hola%20Jaaziel,%20acabo%20de%20hacer%20el%20diagn%C3%B3stico%20t%C3%A9cnico%20IT%20y%20quiero%20hacer%20v%C3%A1lido%20mi%20descuento%20del%2020%25",
+      url: "https://wa.me/524427490997?text=Hola%Ing. Jaaziel N. Flores Garcia,%20acabo%20de%20hacer%20el%20diagn%C3%B3stico%20t%C3%A9cnico%20IT%20y%20quiero%20hacer%20v%C3%A1lido%20mi%20descuento%20del%2020%25",
     },
   );
   doc.setTextColor("#000000");

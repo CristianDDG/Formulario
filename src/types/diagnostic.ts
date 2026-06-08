@@ -47,3 +47,22 @@ export interface SendStatus {
   clientEmail?: string;
   internalEmail?: string;
 }
+
+export type ResultClassification = "critical" | "observation" | "correct" | "unknown";
+
+export interface DiagnosticResultItem {
+  index: number;
+  question: string;
+  status: DiagnosticStatus;
+  observation: string;
+  classification: ResultClassification;
+}
+
+export interface DiagnosticResultsSummaryData {
+  items: DiagnosticResultItem[];
+  total: number;
+  criticalCount: number;
+  observationCount: number;
+  correctCount: number;
+  hasFindings: boolean;
+}

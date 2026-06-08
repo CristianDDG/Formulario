@@ -65,7 +65,7 @@ export function DiagnosticPreviewModal({
         </div>
         <div className="overflow-auto bg-slate-100 p-4">
           <div className="flex min-w-[820px] justify-center">
-            <div className="origin-top scale-[0.74] shadow-2xl lg:scale-[0.86]">
+            <div className="origin-top scale-[0.74] lg:scale-[0.86]">
               <DiagnosticoPrintView ref={printRef} {...printProps} />
             </div>
           </div>

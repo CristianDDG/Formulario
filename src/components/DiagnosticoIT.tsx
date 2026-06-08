@@ -10,7 +10,7 @@ import {
   finalizeAndSendDiagnosis,
 } from "@/services/diagnostic";
 import { generatePDFFromHTML, generatePDFBlobFromHTML } from "@/services/pdf";
-import { isValidEmail } from "@/lib/utils";
+import { isValidEmail, isValidPhone } from "@/lib/utils";
 import type { DiagnosticStatus, DiagnosticValue } from "@/types/diagnostic";
 import DiagnosticoPrintView from "./DiagnosticoPrintView";
 import { useGeolocation } from "@/features/diagnostic/hooks/useGeolocation";
@@ -39,7 +39,7 @@ async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 const WHATSAPP_NUMBER = "524427490997";
-const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola Jaaziel, acabo de completar el Diagnóstico Técnico de Infraestructura IT de Integra y me gustaría recibir asistencia técnica para resolver las incidencias detectadas.")}`;
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Hola Ing. Jaaziel N. Flores Garcia, acabo de completar el Diagnóstico Técnico de Infraestructura IT de Integra y me gustaría recibir asistencia técnica para resolver las incidencias detectadas.")}`;
 export default function DiagnosticoIT() {
   const [state, actions] = useDiagnosticForm();
   const [descargando, setDescargando] = useState(false);
@@ -69,7 +69,6 @@ export default function DiagnosticoIT() {
   const siteDetailsComplete = state.cliente.trim() !== "" && state.ubicacion.trim() !== "";
   const hasRequiredFields = contactComplete && siteDetailsComplete;
   const isComplete = hasRequiredFields && respondidas === TOTAL_QUESTIONS;
-  const isSendable = isComplete && hasClientEmail && isValidEmail(state.correo.trim());
   const progress =
     stage === "intro"
       ? 0
@@ -127,6 +126,16 @@ export default function DiagnosticoIT() {
 
     if (!state.telefono.trim() && !state.correo.trim()) {
       actions.setError("Agrega al menos un medio de contacto: teléfono o correo electrónico.");
+      return false;
+    }
+
+    if (state.correo.trim() && !isValidEmail(state.correo.trim())) {
+      actions.setError("El correo electrónico no tiene un formato válido.");
+      return false;
+    }
+
+    if (state.telefono.trim() && !isValidPhone(state.telefono.trim())) {
+      actions.setError("El teléfono no tiene un formato válido.");
       return false;
     }
 
@@ -238,60 +247,68 @@ export default function DiagnosticoIT() {
       return;
     }
 
-    actions.setSendStatus({ sending: true, error: undefined });
+    try {
+      // Inicia el estado de envío
+      actions.setSendStatus({ sending: true, error: undefined });
 
-    const visualPdfResult = await generatePDFBlobFromHTML(printElement, {
-      filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
-    });
-
-    if (!visualPdfResult.success || !visualPdfResult.pdfBlob) {
-      const generationError =
-        visualPdfResult.error || "No se pudo generar el PDF visual para el correo.";
-      actions.setSendStatus({
-        sent: false,
-        sending: false,
-        error: generationError,
-      });
-      actions.setError(generationError);
-      return;
-    }
-
-    const pdfBase64 = await blobToBase64(visualPdfResult.pdfBlob);
-
-    const result = await finalizeAndSendDiagnosis(
-      state.nombreCompleto,
-      state.telefono,
-      state.correo,
-      state.cliente,
-      state.ubicacion,
-      state.fecha,
-      state.respuestas,
-      state.valores,
-      state.observaciones,
-      {
+      // Genera el PDF en formato base64
+      const visualPdfResult = await generatePDFBlobFromHTML(printElement, {
         filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
-        base64: pdfBase64,
-      },
-    );
-
-    if (result.success && result.sendStatus) {
-      actions.setSendStatus({
-        sent: true,
-        sending: false,
-        sentAt: result.sendStatus.sentAt,
-        clientEmail: result.sendStatus.clientEmail,
-        internalEmail: result.sendStatus.internalEmail,
       });
-    } else {
+
+      if (!visualPdfResult.success || !visualPdfResult.pdfBlob) {
+        const generationError =
+          visualPdfResult.error || "No se pudo generar el PDF visual para el correo.";
+        throw new Error(generationError);
+      }
+
+      const pdfBase64 = await blobToBase64(visualPdfResult.pdfBlob);
+
+      // Envía el diagnóstico
+      const result = await finalizeAndSendDiagnosis(
+        state.nombreCompleto,
+        state.telefono,
+        state.correo,
+        state.cliente,
+        state.ubicacion,
+        state.fecha,
+        state.respuestas,
+        state.valores,
+        state.observaciones,
+        {
+          filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
+          base64: pdfBase64,
+        },
+      );
+
+      if (result.success && result.sendStatus) {
+        // Éxito: actualiza el estado con éxito
+        actions.setSendStatus({
+          sent: true,
+          sending: false,
+          sentAt: result.sendStatus.sentAt,
+          clientEmail: result.sendStatus.clientEmail,
+          internalEmail: result.sendStatus.internalEmail,
+        });
+        actions.setError("");
+      } else {
+        // Error en el envío
+        throw new Error(result.error || "Error enviando el diagnóstico.");
+      }
+    } catch (error) {
+      // Captura cualquier error y lo muestra
+      const errorMessage =
+        error instanceof Error ? error.message : "No se pudo enviar el reporte. Intenta nuevamente";
       actions.setSendStatus({
         sent: false,
         sending: false,
-        error: result.error,
+        error: errorMessage,
       });
-      actions.setError(result.error || "Error enviando el diagnóstico.");
+      actions.setError(errorMessage);
+    } finally {
+      // Siempre asegúrate de que el envío no quede en estado "enviando"
+      setStage("summary");
     }
-
-    setStage("summary");
   };
 
   const handleReset = () => {
@@ -419,6 +436,7 @@ export default function DiagnosticoIT() {
               cliente={state.cliente}
               ubicacion={state.ubicacion}
               fecha={state.fecha}
+              sendStatus={state.sendStatus}
               onEditContact={() => setStage("intro")}
               onSetCurrentQuestion={setCurrentQuestion}
               onSetObservation={actions.setObservacion}
@@ -432,7 +450,6 @@ export default function DiagnosticoIT() {
 
           {stage === "summary" && (
             <SummaryStep
-              isSendable={isSendable}
               isComplete={isComplete}
               criticos={criticos}
               puntos={puntos}
@@ -442,15 +459,15 @@ export default function DiagnosticoIT() {
               cliente={state.cliente}
               ubicacion={state.ubicacion}
               fecha={state.fecha}
-              correo={state.correo}
               sendStatus={state.sendStatus}
               descargando={descargando}
               whatsappUrl={WHATSAPP_URL}
+              respuestas={state.respuestas}
+              observaciones={state.observaciones}
               onReviewAnswers={() => {
                 setStage("questions");
                 setCurrentQuestion(0);
               }}
-              onFinalizeDiagnosis={() => void handleFinalizeDiagnosis()}
               onShowPreview={() => {
                 if (ensureComplete()) setMostrarPreview(true);
               }}

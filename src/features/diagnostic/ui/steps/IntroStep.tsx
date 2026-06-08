@@ -22,6 +22,9 @@ function IntakeField({
   placeholder,
   required = false,
   inputMode,
+  pattern,
+  title,
+  maxLength,
 }: {
   icon: typeof User;
   label: string;
@@ -31,6 +34,9 @@ function IntakeField({
   placeholder?: string;
   required?: boolean;
   inputMode?: InputHTMLAttributes<HTMLInputElement>["inputMode"];
+  pattern?: string;
+  title?: string;
+  maxLength?: number;
 }) {
   return (
     <label className="block">
@@ -41,7 +47,11 @@ function IntakeField({
       </span>
       <input
         type={type}
+        pattern={pattern}
+        title={title}
         inputMode={inputMode}
+        required={required}
+        maxLength={maxLength}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
@@ -133,8 +143,12 @@ export function IntroStep({
             required
             value={state.nombreCompleto}
             placeholder="Nombre de quien responde"
+            pattern="^[A-Za-zÁÉÍÓÚáéíóúÑñÜü'\-\.\s]{2,100}$"
+            title="Nombre completo (letras, espacios, guiones, apóstrofes)."
+            maxLength={100}
             onChange={(value) => {
-              actions.setNombreCompleto(value);
+              const sanitized = value.replace(/[^A-Za-zÁÉÍÓÚáéíóúÑñÜü'\-.\s]/g, "");
+              actions.setNombreCompleto(sanitized);
               markDirty();
             }}
           />
@@ -144,10 +158,13 @@ export function IntroStep({
               label="Teléfono"
               value={state.telefono}
               type="tel"
-              inputMode="tel"
+              inputMode="numeric"
+              pattern="[0-9]{7,15}"
+              title="Solo dígitos (7-15 dígitos)"
               placeholder="Teléfono"
               onChange={(value) => {
-                actions.setTelefono(value);
+                const digits = value.replace(/\D/g, "");
+                actions.setTelefono(digits);
                 markDirty();
               }}
             />
@@ -157,6 +174,7 @@ export function IntroStep({
               value={state.correo}
               type="email"
               inputMode="email"
+              title="correo@empresa.com"
               placeholder="correo@empresa.com"
               onChange={(value) => {
                 actions.setCorreo(value);
@@ -206,8 +224,15 @@ export function IntroStep({
               <input
                 type="text"
                 value={state.ubicacion}
+                maxLength={150}
+                pattern="^[A-Za-z0-9ÁÉÍÓÚáéíóúÑñüÜ,\.\-/#\s]{2,150}$"
+                title="Dirección o ubicación (números, letras, comas, guiones)."
                 onChange={(event) => {
-                  actions.setUbicacion(event.target.value);
+                  const cleaned = event.target.value.replace(
+                    /[^A-Za-z0-9ÁÉÍÓÚáéíóúÑñüÜ,.\-/#\s]/g,
+                    "",
+                  );
+                  actions.setUbicacion(cleaned);
                   markDirty();
                 }}
                 placeholder={
@@ -217,7 +242,7 @@ export function IntroStep({
                 }
                 className="h-12 w-full rounded-lg border border-white/15 bg-white px-4 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-400/25"
               />
-              <div className="mt-2 flex items-center justify-between gap-3">
+              <div className="mt-2 flex flex-col items-start gap-3">
                 <p className="text-xs font-semibold text-slate-400">
                   Puedes capturar la ubicación manualmente o detectarla automáticamente.
                 </p>
@@ -225,7 +250,7 @@ export function IntroStep({
                   type="button"
                   onClick={() => void detectLocation()}
                   disabled={geoStatus === "loading"}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-200 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex w-full max-w-[220px] items-center justify-center gap-2 rounded-md border border-white/20 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-200 transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <MapPin className="h-3.5 w-3.5" />
                   Detectar ubicación

@@ -9,8 +9,12 @@ import type {
   DiagnosticStatus,
   DiagnosticValue,
   SemaforoResult,
+  DiagnosticResultsSummaryData,
+  DiagnosticResultItem,
+  ResultClassification,
 } from "@/types/diagnostic";
 import { isValidEmail } from "@/lib/utils";
+import { isValidPhone } from "@/lib/utils";
 
 export function calculateDiagnosticScore(respuestas: DiagnosticStatus[]) {
   const puntos = respuestas.filter((r) => r === "si").length;
@@ -48,6 +52,20 @@ export function validateFormData(
     return {
       valid: false,
       error: "Agrega al menos un medio de contacto: teléfono o correo electrónico.",
+    };
+  }
+
+  if (correo.trim() && !isValidEmail(correo.trim())) {
+    return {
+      valid: false,
+      error: "Correo electrónico inválido.",
+    };
+  }
+
+  if (telefono.trim() && !isValidPhone(telefono.trim())) {
+    return {
+      valid: false,
+      error: "Teléfono inválido.",
     };
   }
 
@@ -203,4 +221,67 @@ export async function finalizeAndSendDiagnosis(
     const errorMessage = error instanceof Error ? error.message : "Error finalizando diagnóstico";
     return { success: false, error: errorMessage };
   }
+}
+
+export function getSortedDiagnosticResults(
+  respuestas: DiagnosticStatus[],
+  observaciones: string[],
+): DiagnosticResultsSummaryData {
+  if (!respuestas || !observaciones) {
+    return {
+      items: [],
+      total: 0,
+      criticalCount: 0,
+      observationCount: 0,
+      correctCount: 0,
+      hasFindings: false,
+    };
+  }
+
+  const items: DiagnosticResultItem[] = DIAGNOSTIC_QUESTIONS.map((q, i) => {
+    const status = respuestas[i] ?? null;
+    const observation = observaciones[i]?.trim() ?? "";
+
+    let classification: ResultClassification = "unknown";
+    if (status === "no") {
+      classification = "critical";
+    } else if (status === "si" && observation !== "") {
+      classification = "observation";
+    } else if (status === "si") {
+      classification = "correct";
+    }
+
+    return {
+      index: i + 1,
+      question: q.text,
+      status,
+      observation,
+      classification,
+    };
+  });
+
+  const criticalCount = items.filter((i) => i.classification === "critical").length;
+  const observationCount = items.filter((i) => i.classification === "observation").length;
+  const correctCount = items.filter((i) => i.classification === "correct").length;
+  const hasFindings = criticalCount > 0 || observationCount > 0;
+
+  const priorityMap: Record<ResultClassification, number> = {
+    critical: 1,
+    observation: 2,
+    correct: 3,
+    unknown: 4,
+  };
+
+  const sortedItems = [...items].sort(
+    (a, b) => priorityMap[a.classification] - priorityMap[b.classification],
+  );
+
+  return {
+    items: sortedItems,
+    total: DIAGNOSTIC_QUESTIONS.length,
+    criticalCount,
+    observationCount,
+    correctCount,
+    hasFindings,
+  };
 }

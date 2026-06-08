@@ -159,7 +159,7 @@ export function DiagnosticReportEmail(props: DiagnosticReportEmailProps) {
                 en la remediación si nos contactas en las próximas 6 horas.
               </Text>
               <Button
-                href="https://wa.me/524427490997?text=Hola%20Jaaziel,%20acabo%20de%20hacer%20el%20diagn%C3%B3stico%20t%C3%A9cnico%20IT%20y%20quiero%20hacer%20v%C3%A1lido%20mi%20descuento%20del%2020%25"
+                href="https://wa.me/524427490997?text=Hola%20Ing. Jaaziel N. Flores Garcia,%20acabo%20de%20hacer%20el%20diagn%C3%B3stico%20t%C3%A9cnico%20IT%20y%20quiero%20hacer%20v%C3%A1lido%20mi%20descuento%20del%2020%25"
                 style={{
                   backgroundColor: "#22c55e",
                   color: "#ffffff",
@@ -172,7 +172,7 @@ export function DiagnosticReportEmail(props: DiagnosticReportEmailProps) {
                   boxShadow: "0 4px 6px -1px rgba(34, 197, 94, 0.4)",
                 }}
               >
-                Contactar a Jaaziel por WhatsApp
+                Contactar a Ing. Jaaziel N. Flores Garcia por WhatsApp
               </Button>
             </Section>
           )}
