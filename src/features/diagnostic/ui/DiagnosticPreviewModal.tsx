@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { Download, X } from "lucide-react";
+import { X } from "lucide-react";
 import DiagnosticoPrintView, { type PrintViewProps } from "@/components/DiagnosticoPrintView";
 
 interface DiagnosticPreviewModalProps {
@@ -18,12 +18,9 @@ export function DiagnosticPreviewModal({
   open,
   titleId,
   closeRef,
-  printRef,
   printProps,
   subtitle,
-  downloading,
   onClose,
-  onDownload,
 }: DiagnosticPreviewModalProps) {
   if (!open) return null;
 
@@ -56,9 +53,9 @@ export function DiagnosticPreviewModal({
         </div>
         <div className="overflow-auto bg-slate-100 p-4">
           <div className="flex min-w-[820px] justify-center">
-          <div className="origin-top scale-[0.74] lg:scale-[0.86]">
-            <DiagnosticoPrintView {...printProps} />
-          </div>
+            <div className="origin-top scale-[0.74] lg:scale-[0.86]">
+              <DiagnosticoPrintView {...printProps} />
+            </div>
           </div>
         </div>
       </div>

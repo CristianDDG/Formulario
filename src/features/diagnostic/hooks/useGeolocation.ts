@@ -44,6 +44,7 @@ export function useGeolocation({ setUbicacion }: UseGeolocationParams) {
             return;
           }
         } catch {
+          // Si falla la geocodificación inversa, se muestra solo las coordenadas
         }
 
         setUbicacion(`Coordenadas GPS: ${coordinates}`);

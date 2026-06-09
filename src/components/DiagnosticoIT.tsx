@@ -247,7 +247,6 @@ export default function DiagnosticoIT() {
     }
 
     try {
-      
       actions.setSendStatus({ sending: true, error: undefined });
       const visualPdfResult = await generatePDFBlobFromHTML(printElement, {
         filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
