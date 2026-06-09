@@ -64,8 +64,8 @@ src/
 Crea un `.env` basado en `.env.example`:
 
 ```bash
-INTERNAL_REPORT_EMAIL=diagnosticos@integraindustrialnetworks.com
-MAIL_FROM=diagnosticos@integraindustrialnetworks.com
+INTERNAL_REPORT_EMAIL=tu_correo_interno
+MAIL_FROM=tu_correo_para_enviar
 RESEND_API_KEY=tu_api_key_resend
 ```
 
