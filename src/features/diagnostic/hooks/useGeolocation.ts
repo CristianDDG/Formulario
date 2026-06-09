@@ -44,7 +44,6 @@ export function useGeolocation({ setUbicacion }: UseGeolocationParams) {
             return;
           }
         } catch {
-          // Keep coordinate fallback when reverse geocoding fails.
         }
 
         setUbicacion(`Coordenadas GPS: ${coordinates}`);

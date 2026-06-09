@@ -67,7 +67,6 @@ Crea un `.env` basado en `.env.example`:
 INTERNAL_REPORT_EMAIL=diagnosticos@integraindustrialnetworks.com
 MAIL_FROM=diagnosticos@integraindustrialnetworks.com
 RESEND_API_KEY=tu_api_key_resend
-DIAGNOSTIC_API_KEY=opcional_api_key_backend
 ```
 
 ## Desarrollo

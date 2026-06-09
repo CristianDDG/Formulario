@@ -22,8 +22,6 @@ export function getEmailInlineLogoAttachment(): EmailInlineLogoAttachment {
   }
 
   let content = "";
-
-  // Attempt to read the physical file from the workspace to get real binary base64
   try {
     const possiblePaths = [
       path.join(process.cwd(), "src/assets/integra-logo.png"),
@@ -46,7 +44,6 @@ export function getEmailInlineLogoAttachment(): EmailInlineLogoAttachment {
     console.error("Error reading logo file from filesystem in getEmailInlineLogoAttachment:", err);
   }
 
-  // Fallback to inlined bundler string if file system read failed
   if (!content) {
     if (integraLogoBase64 && integraLogoBase64.startsWith("data:image")) {
       content = integraLogoBase64.replace(/^data:image\/png;base64,/i, "");

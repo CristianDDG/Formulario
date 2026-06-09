@@ -149,8 +149,6 @@ export async function sendDiagnosticReportEmails(
   }
 
   const generatedAtLabel = formatTimestampLabel(payload.timestamp);
-
-  // Decide whether to use absolute public logo URL or fallback inline CID logo
   const logoUrl = resolveLogoUrl(env);
   const isCidLogo = logoUrl.startsWith("cid:");
   const inlineLogo = isCidLogo ? getEmailInlineLogoAttachment() : undefined;

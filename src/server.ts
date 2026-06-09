@@ -33,7 +33,6 @@ function getRequestClientKey(request: Request): string {
 function isRateLimited(request: Request): boolean {
   const now = Date.now();
 
-  // Prune old IP records periodically to prevent memory leaks
   if (now - lastCleanup > RATE_LIMIT_WINDOW_MS) {
     for (const [k, v] of requestCounter.entries()) {
       if (now - v.windowStart > RATE_LIMIT_WINDOW_MS) {
@@ -150,8 +149,6 @@ function isCatastrophicSsrErrorBody(body: string, responseStatus: number): boole
   );
 }
 
-// h3 swallows in-handler throws into a normal 500 Response with body
-// {"unhandled":true,"message":"HTTPError"} — try/catch alone never fires for those.
 async function normalizeCatastrophicSsrResponse(response: Response): Promise<Response> {
   if (response.status < 500) return response;
   const contentType = response.headers.get("content-type") ?? "";

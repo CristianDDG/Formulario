@@ -193,7 +193,6 @@ export default function DiagnosticoIT() {
     actions.setError("");
 
     if (currentQuestion >= TOTAL_QUESTIONS - 1) {
-      // Final question - finalize and send diagnosis
       handleFinalizeDiagnosis();
       return;
     }
@@ -248,10 +247,8 @@ export default function DiagnosticoIT() {
     }
 
     try {
-      // Inicia el estado de envío
+      
       actions.setSendStatus({ sending: true, error: undefined });
-
-      // Genera el PDF en formato base64
       const visualPdfResult = await generatePDFBlobFromHTML(printElement, {
         filename: `Diagnostico_${state.cliente}_${state.fecha}.pdf`,
       });
@@ -264,7 +261,6 @@ export default function DiagnosticoIT() {
 
       const pdfBase64 = await blobToBase64(visualPdfResult.pdfBlob);
 
-      // Envía el diagnóstico
       const result = await finalizeAndSendDiagnosis(
         state.nombreCompleto,
         state.telefono,
@@ -282,7 +278,6 @@ export default function DiagnosticoIT() {
       );
 
       if (result.success && result.sendStatus) {
-        // Éxito: actualiza el estado con éxito
         actions.setSendStatus({
           sent: true,
           sending: false,
@@ -292,11 +287,9 @@ export default function DiagnosticoIT() {
         });
         actions.setError("");
       } else {
-        // Error en el envío
         throw new Error(result.error || "Error enviando el diagnóstico.");
       }
     } catch (error) {
-      // Captura cualquier error y lo muestra
       const errorMessage =
         error instanceof Error ? error.message : "No se pudo enviar el reporte. Intenta nuevamente";
       actions.setSendStatus({
@@ -306,7 +299,6 @@ export default function DiagnosticoIT() {
       });
       actions.setError(errorMessage);
     } finally {
-      // Siempre asegúrate de que el envío no quede en estado "enviando"
       setStage("summary");
     }
   };
