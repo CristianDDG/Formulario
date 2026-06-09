@@ -44,15 +44,6 @@ export function DiagnosticPreviewModal({
           </div>
           <div className="flex items-center gap-2">
             <button
-              type="button"
-              onClick={onDownload}
-              disabled={downloading}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-xs font-black text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" />
-              {downloading ? "Generando..." : "Descargar"}
-            </button>
-            <button
               ref={closeRef}
               type="button"
               onClick={onClose}
@@ -65,9 +56,9 @@ export function DiagnosticPreviewModal({
         </div>
         <div className="overflow-auto bg-slate-100 p-4">
           <div className="flex min-w-[820px] justify-center">
-            <div className="origin-top scale-[0.74] lg:scale-[0.86]">
-              <DiagnosticoPrintView ref={printRef} {...printProps} />
-            </div>
+          <div className="origin-top scale-[0.74] lg:scale-[0.86]">
+            <DiagnosticoPrintView {...printProps} />
+          </div>
           </div>
         </div>
       </div>
