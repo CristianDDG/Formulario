@@ -20,8 +20,6 @@ import { IntroStep } from "@/features/diagnostic/ui/steps/IntroStep";
 import { QuestionStep } from "@/features/diagnostic/ui/steps/QuestionStep";
 import { SummaryStep } from "@/features/diagnostic/ui/steps/SummaryStep";
 import type { FlowStage } from "@/features/diagnostic/model/types";
-
-
 import datacenterBg from "@/assets/datacenter-bg.jpg";
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -460,8 +458,6 @@ export default function DiagnosticoIT() {
             />
           )}
         </main>
-
-
       </div>
 
       <DiagnosticPreviewModal
