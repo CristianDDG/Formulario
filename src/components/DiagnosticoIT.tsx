@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { AlertCircle, Globe2, Phone } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 import { DIAGNOSTIC_QUESTIONS, TOTAL_QUESTIONS } from "@/constants/diagnostics";
 import { useDiagnosticForm } from "@/hooks/useDiagnosticForm";
@@ -21,7 +21,7 @@ import { QuestionStep } from "@/features/diagnostic/ui/steps/QuestionStep";
 import { SummaryStep } from "@/features/diagnostic/ui/steps/SummaryStep";
 import type { FlowStage } from "@/features/diagnostic/model/types";
 
-import logo from "@/assets/integra-logo.png";
+
 import datacenterBg from "@/assets/datacenter-bg.jpg";
 
 async function blobToBase64(blob: Blob): Promise<string> {
@@ -337,14 +337,7 @@ export default function DiagnosticoIT() {
             backgroundSize: "cover",
           }}
         >
-          <div className="grid min-h-[210px] grid-cols-1 gap-0 md:grid-cols-[260px_1fr]">
-            <div className="flex items-center justify-center border-b border-slate-200 bg-white/95 p-6 md:border-b-0 md:border-r">
-              <img
-                src={logo}
-                alt="Integra Industrial Networks"
-                className="h-auto w-full max-w-[210px] object-contain"
-              />
-            </div>
+          <div className="flex min-h-[210px] items-center">
             <div className="flex flex-col justify-center px-6 py-8 sm:px-10">
               <h1 className="max-w-3xl text-3xl font-black uppercase leading-tight text-[#082247] sm:text-5xl">
                 Diagnóstico técnico
@@ -468,16 +461,7 @@ export default function DiagnosticoIT() {
           )}
         </main>
 
-        <footer className="flex flex-col gap-3 bg-[#061a36] px-5 py-4 text-sm font-black text-white sm:flex-row sm:items-center sm:justify-center sm:gap-12">
-          <span className="inline-flex items-center justify-center gap-2">
-            <Phone className="h-5 w-5 text-orange-500" />
-            442 749 0997
-          </span>
-          <span className="inline-flex items-center justify-center gap-2">
-            <Globe2 className="h-5 w-5 text-orange-500" />
-            www.integraindustrialnetworks.com
-          </span>
-        </footer>
+
       </div>
 
       <DiagnosticPreviewModal
